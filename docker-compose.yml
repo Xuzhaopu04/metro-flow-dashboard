@@ -1,0 +1,54 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: metro-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_PASSWORD:-metro_dev_pwd}"
+      MYSQL_DATABASE: "${MYSQL_DB:-metro}"
+      TZ: "Asia/Shanghai"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: metro-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    container_name: metro-web
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      MYSQL_HOST: "mysql"
+      MYSQL_DB: "${MYSQL_DB:-metro}"
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-metro_dev_pwd}"
+      REDIS_HOST: "redis"
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:
+  redis_data:
