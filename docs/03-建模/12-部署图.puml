@@ -1,0 +1,41 @@
+@startuml 12-部署图
+title 部署视图（本地开发形态）
+skinparam shadowing false
+
+node "开发机 / 演示机" {
+
+  node "Docker Engine" {
+    node "metro-mysql\nmysql:8" as MYSQL {
+      artifact "库 metro\n表 metric_window" as T1
+    }
+    node "metro-redis\nredis:7" as REDIS {
+      artifact "stream gate_events" as T2
+      artifact "key metric:snapshot" as T3
+    }
+  }
+
+  node "Python 进程组" {
+    node "模拟器\nsimulator.py" as SIM
+    node "消费者\nconsumer.py" as CON
+    node "Web 服务\nmanage.py runserver :8000" as WEB
+  }
+
+  node "浏览器" as BROWSER
+}
+
+MYSQL -[hidden]- REDIS
+SIM --> REDIS : 6379 写事件
+REDIS --> CON : 6379 读事件
+CON --> REDIS : 写快照
+CON --> MYSQL : 3306 写明细
+WEB --> REDIS : 读快照
+WEB --> MYSQL : 读历史
+BROWSER --> WEB : HTTP :8000
+
+note right of WEB
+  页面由 Django 渲染，
+  与接口同源，无需 CORS。
+  生产部署可换成
+  gunicorn + nginx。
+end note
+@enduml

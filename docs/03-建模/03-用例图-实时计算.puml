@@ -1,0 +1,39 @@
+@startuml 03-用例图-实时计算
+title 实时计算模块 用例图
+left to right direction
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F4F8FD
+  BorderColor #4A6B8A
+}
+
+actor "计算进程\n(消费者)" as worker
+actor "系统维护者" as ops
+actor "事件队列\n(Redis Stream)" as queue
+actor "数据服务模块\n(下游)" as api
+actor "指标库\n(MySQL)" as db
+
+rectangle "实时计算模块（stream/）" {
+  usecase "UC-05 消费事件" as UC05
+  usecase "UC-06 窗口聚合出指标" as UC06
+  usecase "UC-07 判定迟到与非法事件" as UC07
+  usecase "UC-08 写快照与落库" as UC08
+  usecase "UC-09 重启后续消费" as UC09
+}
+
+worker --> UC05
+worker --> UC06
+worker --> UC08
+ops --> UC09
+
+queue --> UC05
+
+UC06 ..> UC07 : <<include>>
+UC08 ..> UC06 : <<include>>
+UC09 ..> UC05 : <<include>>
+
+UC08 --> api : metric:snapshot
+UC08 --> db : metric_window
+@enduml

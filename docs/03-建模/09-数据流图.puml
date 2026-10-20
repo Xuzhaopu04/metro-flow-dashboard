@@ -1,0 +1,26 @@
+@startuml 09-数据流图
+title 实时客流监测系统 数据流图（第 1 层）
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+rectangle "外部实体\n闸机 / 模拟器" as E1
+rectangle "外部实体\n值班员" as E2
+
+rectangle "P1\n窗口聚合\n(stream/consumer.py)" as P1
+rectangle "P2\n快照服务\n(api/views.py)" as P2
+rectangle "P3\n历史查询\n(api/views.py)" as P3
+
+database "D1  事件队列\nRedis Stream\ngate_events" as D1
+database "D2  最新快照\nRedis String\nmetric:snapshot" as D2
+database "D3  指标明细\nMySQL\nmetric_window" as D3
+
+E1 --> D1 : 刷卡事件(GateEvent)
+D1 --> P1 : 待消费事件
+P1 --> D2 : 快照 JSON(TTL 5s)
+P1 --> D3 : 每站每窗口一行
+D2 --> P2 : 读取最新快照
+D3 --> P3 : 按时间/站点查询
+P2 --> E2 : /api/snapshot
+P3 --> E2 : /api/series、/api/rank
+E2 --> P2 : 1 秒轮询
+@enduml

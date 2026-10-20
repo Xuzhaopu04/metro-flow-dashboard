@@ -1,0 +1,42 @@
+@startuml 11-时序图
+title 一次刷卡数据从产生到上屏
+autonumber
+
+participant "模拟器\nsimulator.py" as SIM
+participant "Redis Stream\ngate_events" as Q
+participant "消费者\nconsumer.py" as CON
+participant "指标计算\nmetrics.py" as MET
+participant "Redis\nmetric:snapshot" as SNAP
+participant "MySQL\nmetric_window" as DB
+participant "接口\napi/views.py" as API
+participant "浏览器\nindex.html" as WEB
+
+SIM -> Q : XADD data=GateEvent
+Q --> CON : XREADGROUP(消费组 metric_builder)
+
+CON -> MET : split_ready(事件, 窗口结束)
+MET --> CON : (本轮可算, 留给下一轮)
+
+CON -> MET : aggregate_window(本轮事件, 窗口起点)
+MET --> CON : total / stations / late / invalid
+
+CON -> SNAP : SET 快照 JSON, TTL 5s
+CON -> DB : bulk_create 每站一行(幂等)
+CON -> Q : XACK 消息已处理
+
+WEB -> API : GET /api/snapshot (每秒)
+API -> SNAP : GET metric:snapshot
+alt 快照存在
+  SNAP --> API : 快照 JSON
+  API --> WEB : 200 + 数据
+else 快照过期或 Redis 不可用
+  SNAP --> API : 空
+  API --> WEB : 200 + 空结构
+  WEB -> WEB : 显示"暂无数据"
+end
+
+WEB -> API : GET /api/series、/api/rank (每 5 秒)
+API -> DB : 按时间范围聚合
+DB --> API : 序列 / 排行
+API --> WEB : 200 + 数据
+@enduml

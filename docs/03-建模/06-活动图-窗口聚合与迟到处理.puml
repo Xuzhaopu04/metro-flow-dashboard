@@ -1,0 +1,46 @@
+@startuml 06-活动图-窗口聚合与迟到处理
+title 活动图：窗口聚合与迟到处理（UC-06、UC-07）
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F4F8FD
+  BorderColor #4A6B8A
+  DiamondBackgroundColor #EEF4FB
+}
+
+start
+:启动消费者;
+:ping Redis;
+if (Redis 可用?) then (是)
+  :建立或加入消费组\nGROUP=metric_builder;
+else (否)
+  :打印提示并退出;
+  stop
+endif
+
+repeat
+  :对齐窗口起点（向下取整到秒）;
+  :计算窗口结束时间;
+  :读取一批事件（阻塞最多 0.5 秒）;
+
+  while (还有未处理的事件?) is (是)
+    if (event_time / passengers 可解析?) then (否)
+      :非法计数 +1;
+    elseif (早于「窗口起点 − 2 个窗口」?) then (是)
+      :迟到计数 +1\n并按站点记录;
+    elseif (晚于窗口结束时间?) then (是)
+      :暂存，留到下一轮;
+    else (否)
+      :按站点累加客流;
+    endif
+  endwhile
+
+  :站点按客流降序排列;
+  :写快照 metric:snapshot\nTTL 5 秒;
+  :按站点批量落库\n唯一键冲突则忽略;
+  :确认已处理消息;
+  :扣掉本轮耗时后休眠;
+repeat while (进程仍在运行?) is (是) not (否)
+
+:关闭连接;
+stop
+@enduml

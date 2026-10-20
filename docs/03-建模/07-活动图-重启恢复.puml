@@ -1,0 +1,49 @@
+@startuml 07-活动图-重启恢复
+title 活动图：消费者重启后的续消费与幂等落库（UC-09、UC-08）
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F4F8FD
+  BorderColor #4A6B8A
+  DiamondBackgroundColor #EEF4FB
+}
+
+start
+:消费者异常退出或被人为停止;
+:重新启动进程;
+:校验 Redis 连接;
+:加入消费组（组已存在则复用）;
+
+if (组内还有未确认消息?) then (有)
+  :从上次确认位点之后继续读;
+  note right
+    这些消息上次读到了
+    但没来得及确认，
+    Redis 会重新投递
+  end note
+else (没有)
+  :只读新到达的消息;
+endif
+
+:按窗口重新聚合;
+
+if (本窗口有站点数据?) then (有)
+  :组装每站一行;
+  if ((ts, station_id) 已存在?) then (是)
+    :唯一键冲突，忽略重复行;
+  else (否)
+    :插入新行;
+  endif
+else (没有)
+  :跳过落库;
+endif
+
+:覆盖写快照（新值直接替换旧值）;
+:确认消息，位点前移;
+
+if (进程继续运行?) then (是)
+  :进入下一个窗口;
+else (否)
+  :关闭连接并退出;
+  stop
+endif
+@enduml

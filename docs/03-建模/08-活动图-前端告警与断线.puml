@@ -1,0 +1,48 @@
+@startuml 08-活动图-前端告警与断线
+title 活动图：大屏告警与断线处理（UC-14、UC-17、UC-18）
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #F4F8FD
+  BorderColor #4A6B8A
+  DiamondBackgroundColor #EEF4FB
+}
+
+start
+:打开大屏页面;
+:初始化柱状图与趋势图;
+:首次拉取快照与历史;
+
+repeat
+  :请求 /api/snapshot;
+  if (状态码 2xx?) then (否)
+    :标记为断线;
+    :底部显示「连接中断，正在重试」;
+    note right
+      保留上一帧数据但不再
+      当作最新值展示
+    end note
+  else (是)
+    :标记为在线;
+    :更新总客流、数据时间与质量计数;
+    if (总客流 ≥ 阈值?) then (是)
+      :显示红色告警横幅\n文案带当前值与阈值;
+    else (否)
+      :隐藏告警横幅;
+    endif
+    :按当前线路筛选重绘柱状图;
+  endif
+  :等待 1 秒;
+repeat while (页面仍打开?) is (是) not (否)
+
+:清除定时器并释放图表实例;
+stop
+
+partition 每 5 秒独立执行 {
+  :请求 /api/series 与 /api/rank;
+  if (请求成功?) then (是)
+    :重绘趋势折线与排行列表;
+  else (否)
+    :保留上一轮图形，不打断主看板;
+  endif
+}
+@enduml

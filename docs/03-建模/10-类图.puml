@@ -1,0 +1,70 @@
+@startuml 10-类图
+title 核心领域模型
+skinparam classAttributeIconSize 0
+hide circle
+
+class GateEvent {
+  + event_id : str
+  + station_id : str
+  + line_id : str
+  + event_type : str
+  + passengers : int
+  + event_time : datetime
+  --
+  契约第 2.1 节定义，
+  生产者与消费者共享
+}
+
+class WindowResult {
+  + total : int
+  + stations : list
+  + late_count : int
+  + invalid_count : int
+  + late_by_station : dict
+  --
+  aggregate_window() 的返回值，
+  只在进程内传递
+}
+
+class StationStat {
+  + station_id : str
+  + line_id : str
+  + passengers : int
+}
+
+class MetricWindow {
+  + id : BigAutoField
+  + ts : datetime
+  + station_id : str
+  + passengers : int
+  + late_count : int
+  --
+  表 metric_window
+  唯一键 (ts, station_id)
+}
+
+class Snapshot {
+  + ts : datetime
+  + total : int
+  + stations : list
+  + late_count : int
+  + invalid_count : int
+  --
+  metric:snapshot 的值，
+  对外契约的一部分
+}
+
+class MetricCalculator {
+  + window_start_of(moment, seconds)
+  + split_ready(events, window_end)
+  + aggregate_window(events, start, seconds)
+  + top_stations(stations, top)
+}
+
+GateEvent "1..*" --> WindowResult : 输入
+WindowResult *-- "0..*" StationStat
+WindowResult ..> Snapshot : 转换为对外结构
+Snapshot o-- "0..*" StationStat
+MetricWindow ..> Snapshot : 历史聚合来源
+MetricCalculator ..> WindowResult : 产出
+@enduml

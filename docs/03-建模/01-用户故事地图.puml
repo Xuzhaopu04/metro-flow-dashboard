@@ -1,0 +1,42 @@
+@startmindmap
+<style>
+mindmapDiagram {
+  node {
+    BackgroundColor #F4F8FD
+    LineColor #4A6B8A
+    FontColor #1F2D3D
+  }
+  rootNode {
+    BackgroundColor #D6E6F7
+    LineColor #2E5C8A
+    FontColor #12263A
+  }
+}
+</style>
+* 实时客流监测大屏
+** 造数
+*** 按站按线路生成刷卡记录
+*** 限速与限量
+*** 早晚高峰分布
+*** 注入脏数据
+*** 回放固定样例
+** 采集
+*** 写入事件队列
+*** 断线时明确提示
+** 计算
+*** 按秒切窗
+*** 按站汇总
+*** 迟到与非法计数
+*** 快照与历史双写
+** 展示
+*** 实时客流数字
+*** 超阈值告警
+*** 各站柱状图
+*** 线路筛选
+*** 排行与趋势
+*** 断线提示
+** 回看
+*** 历史曲线
+*** 站点排行
+*** 对账与抽查
+@endmindmap

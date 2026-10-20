@@ -1,0 +1,37 @@
+@startuml 04-用例图-数据服务
+title 数据服务模块 用例图
+left to right direction
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F4F8FD
+  BorderColor #4A6B8A
+}
+
+actor "值班员" as guard
+actor "值班主管" as lead
+actor "可视化展示模块\n(大屏页面)" as web
+actor "指标库\n(MySQL)" as db
+actor "快照缓存\n(Redis)" as cache
+
+rectangle "数据服务模块（api/）" {
+  usecase "UC-10 获取实时快照" as UC10
+  usecase "UC-11 查询历史序列" as UC11
+  usecase "UC-12 查询站点排行" as UC12
+  usecase "UC-13 渲染大屏页面" as UC13
+}
+
+guard --> UC13
+web --> UC10
+web --> UC11
+web --> UC12
+lead --> UC11
+lead --> UC12
+
+UC10 --> cache : 读 metric:snapshot
+UC11 --> db : 按时间聚合
+UC12 --> db : 按站求和
+
+UC13 ..> UC10 : <<include>>
+@enduml
