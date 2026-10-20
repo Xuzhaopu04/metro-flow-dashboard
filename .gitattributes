@@ -1,0 +1,26 @@
+# 统一换行符，避免 Windows 与 macOS 之间整文件 diff
+* text=auto eol=lf
+
+*.py   text eol=lf
+*.sh   text eol=lf
+*.md   text eol=lf
+*.puml text eol=lf
+*.yml  text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.ini  text eol=lf
+*.txt  text eol=lf
+
+# 这几个要是变成 CRLF，容器里和 Windows 上跑出来的行为会不一样
+Makefile   text eol=lf
+Dockerfile text eol=lf
+*.example  text eol=lf
+
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# 二进制文件不做换行转换
+*.png  binary
+*.jpg  binary
+*.docx binary
+*.db   binary

@@ -1,0 +1,41 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 数据与日志：忽略运行产物，保留样例数据
+data/*
+!data/.gitkeep
+!data/samples/
+!data/samples/**
+*.db
+*.sqlite3
+*.log
+
+# 配置、密钥与证书
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 测试与检查缓存
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 构建产物
+dist/
+build/
+*.egg-info/
