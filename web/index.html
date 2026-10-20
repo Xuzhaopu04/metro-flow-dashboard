@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实时客流监测大屏</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    :root { --bg: #0f172a; --panel: #182335; --line: #243349; --text: #e2e8f0; --muted: #7c8ba1; --accent: #38bdf8; --alert: #ef4444; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; }
+    #app { max-width: 1280px; margin: 0 auto; padding: 20px 24px 28px; }
+    header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: 1px; }
+    .stat { font-size: 13px; color: var(--muted); }
+    .stat b { font-size: 26px; color: var(--accent); font-weight: 600; margin: 0 4px; }
+    .alert { background: rgba(239,68,68,.15); border: 1px solid var(--alert); color: #fca5a5;
+             padding: 8px 14px; border-radius: 6px; font-size: 13px; margin-top: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; margin-top: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+    .card h2 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0 0 12px; letter-spacing: .5px; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
+    .tab { padding: 4px 12px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
+           font-size: 12px; color: var(--muted); background: transparent; }
+    .tab.on { color: var(--accent); border-color: var(--accent); }
+    .chart { width: 100%; height: 300px; }
+    .chart.slim { height: 190px; }
+    ol { list-style: none; margin: 0; padding: 0; }
+    ol li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    ol li:last-child { border-bottom: none; }
+    .no { width: 18px; color: var(--muted); font-size: 12px; }
+    .name { flex: 1; }
+    .num { color: var(--accent); font-variant-numeric: tabular-nums; }
+    footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px;
+             font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+    .dot.ok { background: #22c55e; } .dot.bad { background: var(--alert); }
+  </style>
+</head>
+<body>
+{# 这一整块由浏览器里的 Vue 解释，Django 模板不要动它，否则 {{ }} 会被当成模板语法 #}
+{% verbatim %}
+<div id="app">
+  <header>
+    <h1>实时客流监测</h1>
+    <div class="stat">当前客流<b>{{ total }}</b>人次 / 秒</div>
+  </header>
+
+  <div class="alert" v-if="alerting">客流告警：当前 {{ total }} 人次/秒，已超过阈值 {{ threshold }}</div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>各站实时客流</h2>
+      <div class="toolbar">
+        <button v-for="opt in lineOptions" :key="opt.value"
+                class="tab" :class="{ on: line === opt.value }"
+                @click="line = opt.value">{{ opt.label }}</button>
+      </div>
+      <div class="chart" ref="barEl"></div>
+    </section>
+
+    <aside class="card">
+      <h2>近 5 分钟客流排行</h2>
+      <ol>
+        <li v-for="(item, index) in rank" :key="item.station_id">
+          <span class="no">{{ index + 1 }}</span>
+          <span class="name">{{ item.station_id }}</span>
+          <span class="num">{{ item.passengers }}</span>
+        </li>
+        <li v-if="!rank.length" style="color: var(--muted)">暂无数据</li>
+      </ol>
+    </aside>
+  </div>
+
+  <section class="card" style="margin-top: 16px">
+    <h2>近 5 分钟客流趋势</h2>
+    <div class="chart slim" ref="lineEl"></div>
+  </section>
+
+  <footer>
+    <span><span class="dot" :class="online ? 'ok' : 'bad'"></span>{{ online ? '实时连接' : '连接中断，正在重试' }}</span>
+    <span>{{ snapshotTs ? '数据时间 ' + snapshotTs : '等待数据' }}</span>
+    <span>迟到 {{ lateCount }} 条 · 非法 {{ invalidCount }} 条</span>
+  </footer>
+</div>
+{% endverbatim %}
+
+<script>
+const { createApp, ref, computed, watch, onMounted, onUnmounted } = Vue;
+
+const THRESHOLD = 100;          // 单窗口客流告警阈值，后续做成可配置
+const SNAPSHOT_MS = 1000;       // 快照刷新间隔
+const HISTORY_MS = 5000;        // 历史与排行刷新间隔，没必要每秒查库
+const AXIS = { axisLine: { lineStyle: { color: "#243349" } }, axisLabel: { color: "#7c8ba1" } };
+
+createApp({
+  setup() {
+    const total = ref(0);
+    const snapshotTs = ref("");
+    const lateCount = ref(0);
+    const invalidCount = ref(0);
+    const stations = ref([]);
+    const rank = ref([]);
+    const trends = ref([]);
+    const online = ref(true);
+    const line = ref("all");
+    const barEl = ref(null);
+    const lineEl = ref(null);
+
+    const lineOptions = [
+      { value: "all", label: "全部线路" },
+      { value: "L1", label: "1 号线" },
+      { value: "L2", label: "2 号线" }
+    ];
+    const threshold = THRESHOLD;
+    const alerting = computed(() => total.value >= THRESHOLD);
+
+    let barChart = null;
+    let trendChart = null;
+    let timers = [];
+
+    async function getJSON(url) {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(url + " -> " + res.status);
+      return res.json();
+    }
+
+    async function loadSnapshot() {
+      try {
+        const data = await getJSON("/api/snapshot");
+        online.value = true;
+        total.value = data.total || 0;
+        snapshotTs.value = data.ts || "";
+        lateCount.value = data.late_count || 0;
+        invalidCount.value = data.invalid_count || 0;
+        stations.value = Array.isArray(data.stations) ? data.stations : [];
+        drawBars();
+      } catch (e) {
+        online.value = false;
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const [series, top] = await Promise.all([
+          getJSON("/api/series?minutes=5"),
+          getJSON("/api/rank?top=5")
+        ]);
+        trends.value = series.points || [];
+        rank.value = top.top || [];
+        drawTrend();
+      } catch (e) {
+        // 历史接口挂掉不影响主看板，下一轮再试
+      }
+    }
+
+    const visibleStations = computed(() =>
+      line.value === "all" ? stations.value : stations.value.filter(s => s.line_id === line.value)
+    );
+
+    function drawBars() {
+      if (!barChart) return;
+      const rows = visibleStations.value;
+      barChart.setOption({
+        tooltip: { trigger: "axis" },
+        grid: { left: 44, right: 16, top: 16, bottom: 28 },
+        xAxis: { type: "category", data: rows.map(s => s.station_id), ...AXIS },
+        yAxis: { type: "value", name: "人次", nameTextStyle: { color: "#7c8ba1" }, splitLine: { lineStyle: { color: "#1f2c40" } }, ...AXIS },
+        series: [{
+          type: "bar",
+          barMaxWidth: 42,
+          data: rows.map(s => s.passengers),
+          itemStyle: { color: "#38bdf8", borderRadius: [3, 3, 0, 0] }
+        }]
+      });
+    }
+
+    function drawTrend() {
+      if (!trendChart) return;
+      const points = trends.value;
+      trendChart.setOption({
+        tooltip: { trigger: "axis" },
+        grid: { left: 44, right: 16, top: 16, bottom: 28 },
+        xAxis: {
+          type: "category",
+          data: points.map(p => p.ts.slice(11, 19)),
+          boundaryGap: false,
+          ...AXIS
+        },
+        yAxis: { type: "value", name: "人次", nameTextStyle: { color: "#7c8ba1" }, splitLine: { lineStyle: { color: "#1f2c40" } }, ...AXIS },
+        series: [{
+          type: "line",
+          smooth: true,
+          showSymbol: false,
+          data: points.map(p => p.passengers),
+          lineStyle: { color: "#38bdf8", width: 2 },
+          areaStyle: { color: "rgba(56,189,248,.12)" }
+        }]
+      });
+    }
+
+    watch(line, drawBars);
+
+    onMounted(() => {
+      barChart = echarts.init(barEl.value);
+      trendChart = echarts.init(lineEl.value);
+      window.addEventListener("resize", resize);
+      loadSnapshot();
+      loadHistory();
+      timers.push(setInterval(loadSnapshot, SNAPSHOT_MS));
+      timers.push(setInterval(loadHistory, HISTORY_MS));
+    });
+
+    onUnmounted(() => {
+      timers.forEach(clearInterval);
+      window.removeEventListener("resize", resize);
+      barChart && barChart.dispose();
+      trendChart && trendChart.dispose();
+    });
+
+    function resize() {
+      barChart && barChart.resize();
+      trendChart && trendChart.resize();
+    }
+
+    return { total, snapshotTs, lateCount, invalidCount, rank, online, line, lineOptions,
+             threshold, alerting, barEl, lineEl };
+  }
+}).mount("#app");
+</script>
+</body>
+</html>
