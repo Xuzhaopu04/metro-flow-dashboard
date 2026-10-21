@@ -39,6 +39,8 @@ services:
       MYSQL_USER: "root"
       MYSQL_PASSWORD: "${MYSQL_PASSWORD:-metro_dev_pwd}"
       REDIS_HOST: "redis"
+      # 告警阈值：不传进容器的话，改 .env 在容器里不生效
+      ALERT_THRESHOLD: "${ALERT_THRESHOLD:-100}"
     ports:
       - "8000:8000"
     depends_on:

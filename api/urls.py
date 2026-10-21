@@ -7,4 +7,5 @@ urlpatterns = [
     path("api/snapshot", views.snapshot, name="snapshot"),
     path("api/series", views.series, name="series"),
     path("api/rank", views.rank, name="rank"),
+    path("api/alert", views.alert, name="alert"),
 ]

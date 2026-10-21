@@ -4,13 +4,17 @@
 """
 
 import json
+import logging
 from datetime import timedelta
 
 import pytest
+import redis
+from django.conf import settings
 from django.utils import timezone
 
 from api import views
 from api.models import MetricWindow
+from config.settings import parse_positive_int
 
 
 class FakeRedis:
@@ -131,3 +135,103 @@ def test_dashboard_renders(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "实时客流" in response.content.decode()
+
+
+# ---- 告警接口（契约 4.4）----
+
+
+def test_alert_falls_back_when_snapshot_missing(client):
+    """没有快照时接口仍要 200，并且不报"告警"，否则页面一开就红。"""
+    body = client.get("/api/alert").json()
+    assert body["current"] == 0
+    assert body["alerting"] is False
+    assert body["threshold"] == settings.ALERT_THRESHOLD
+
+
+def test_alert_reports_current_value(client, fake_redis):
+    payload = {"ts": "2026-10-20T09:30:15+08:00", "total": 37,
+               "stations": [], "late_count": 0, "invalid_count": 0}
+    fake_redis(json.dumps(payload))
+    body = client.get("/api/alert").json()
+    assert body["current"] == 37
+    assert body["alerting"] is False
+
+
+@pytest.mark.parametrize("total, expected", [(99, False), (100, True), (101, True)])
+def test_alert_threshold_boundary(client, fake_redis, total, expected):
+    """边界定在"≥阈值即告警"，与用例表 UC-17 的文案一致。"""
+    payload = {"ts": "2026-10-20T09:30:15+08:00", "total": total,
+               "stations": [], "late_count": 0, "invalid_count": 0}
+    fake_redis(json.dumps(payload))
+    assert client.get("/api/alert").json()["alerting"] is expected
+
+
+def test_alert_uses_configured_threshold(client, fake_redis, settings):
+    """阈值来自配置而不是写死：改 settings 就该生效，这是本次改造的验收点。"""
+    settings.ALERT_THRESHOLD = 50
+    payload = {"ts": "2026-10-20T09:30:15+08:00", "total": 60,
+               "stations": [], "late_count": 0, "invalid_count": 0}
+    fake_redis(json.dumps(payload))
+    body = client.get("/api/alert").json()
+    assert body["threshold"] == 50
+    assert body["alerting"] is True
+
+
+def test_alert_falls_back_on_broken_json(client, fake_redis):
+    """快照写坏了按空快照处理，不能让告警接口 500。"""
+    fake_redis("{坏的快照")
+    body = client.get("/api/alert").json()
+    assert body["current"] == 0
+    assert body["alerting"] is False
+
+
+def test_alert_falls_back_when_redis_down(client, monkeypatch):
+    """Redis 连不上时告警接口要降级，不能把异常抛给页面。"""
+
+    class BrokenRedis:
+        def get(self, key):
+            raise redis.RedisError("connection refused")
+
+    monkeypatch.setattr(views, "_client", BrokenRedis())
+    response = client.get("/api/alert")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["current"] == 0
+    assert body["alerting"] is False
+
+
+def test_alert_is_not_cached(client):
+    """告警状态每秒都变，被缓存住页面就会一直挂着旧横幅。"""
+    assert client.get("/api/alert")["Cache-Control"] == "no-store"
+
+
+# ---- 阈值配置解析（config.settings.parse_positive_int）----
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("50", 50),
+    ("  120  ", 120),   # .env 里手抖多打了空格
+    (None, 100),        # 没配
+    ("", 100),          # 配了但留空，属于"没配"
+    ("   ", 100),
+    ("abc", 100),       # 写错不能把服务拖挂
+    ("3.7", 100),
+    ("0", 100),         # 0 会让告警永远成立，无意义
+    ("-5", 100),
+])
+def test_parse_positive_int(raw, expected):
+    assert parse_positive_int(raw, 100, "ALERT_THRESHOLD") == expected
+
+
+def test_parse_positive_int_logs_on_bad_value(caplog):
+    """配错了要留下痕迹，否则线上排查时只会觉得"阈值怎么不生效"。"""
+    with caplog.at_level(logging.WARNING):
+        parse_positive_int("abc", 100, "ALERT_THRESHOLD")
+    assert "ALERT_THRESHOLD" in caplog.text
+
+
+def test_parse_positive_int_silent_when_unset(caplog):
+    """只是没配而已，不该刷日志。"""
+    with caplog.at_level(logging.WARNING):
+        parse_positive_int(None, 100, "ALERT_THRESHOLD")
+    assert caplog.text == ""

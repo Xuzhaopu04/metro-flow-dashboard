@@ -90,7 +90,6 @@
 <script>
 const { createApp, ref, computed, watch, onMounted, onUnmounted } = Vue;
 
-const THRESHOLD = 100;          // 单窗口客流告警阈值，后续做成可配置
 const SNAPSHOT_MS = 1000;       // 快照刷新间隔
 const HISTORY_MS = 5000;        // 历史与排行刷新间隔，没必要每秒查库
 const AXIS = { axisLine: { lineStyle: { color: "#243349" } }, axisLabel: { color: "#7c8ba1" } };
@@ -114,8 +113,10 @@ createApp({
       { value: "L1", label: "1 号线" },
       { value: "L2", label: "2 号线" }
     ];
-    const threshold = THRESHOLD;
-    const alerting = computed(() => total.value >= THRESHOLD);
+    // 阈值与告警判定都由服务端给，页面不再自己持有常量：
+    // 否则改阈值要改代码，前后端两份口径也容易不一致
+    const threshold = ref(null);
+    const alerting = ref(false);
 
     let barChart = null;
     let trendChart = null;
@@ -125,6 +126,16 @@ createApp({
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(url + " -> " + res.status);
       return res.json();
+    }
+
+    async function loadAlert() {
+      try {
+        const data = await getJSON("/api/alert");
+        threshold.value = data.threshold;
+        alerting.value = Boolean(data.alerting);
+      } catch (e) {
+        // 告警接口挂了不该影响主看板，横幅保持上一轮状态，下一轮再试
+      }
     }
 
     async function loadSnapshot() {
@@ -209,8 +220,10 @@ createApp({
       window.addEventListener("resize", resize);
       loadSnapshot();
       loadHistory();
+      loadAlert();
       timers.push(setInterval(loadSnapshot, SNAPSHOT_MS));
       timers.push(setInterval(loadHistory, HISTORY_MS));
+      timers.push(setInterval(loadAlert, SNAPSHOT_MS));
     });
 
     onUnmounted(() => {

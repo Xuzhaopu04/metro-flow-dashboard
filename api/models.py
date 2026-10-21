@@ -4,7 +4,7 @@ from django.db import models
 class MetricWindow(models.Model):
     """每秒每站点一行指标，用于历史查询与离线对账。
 
-    字段口径见 docs/api-contract.md 第 3 节：
+    字段口径见 docs/02-设计/指标口径.md：
     passengers 是该窗口内的新增客流，不是累计值。
     """
 
