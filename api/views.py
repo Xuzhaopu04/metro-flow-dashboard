@@ -47,7 +47,7 @@ def dashboard(request):
 
 
 def snapshot(request):
-    """最新一秒的指标快照，契约 5.1。没有数据也返回 200。"""
+    """最新一秒的指标快照，契约 4.1。没有数据也返回 200。"""
     response = _json(_read_snapshot())
     # 页面每秒拉一次，被浏览器或代理缓存住就会看起来"卡住不动"
     response["Cache-Control"] = "no-store"
@@ -69,7 +69,7 @@ def _read_snapshot():
 
 
 def series(request):
-    """历史序列，契约 5.2。不传 station_id 就按时间戳汇总全部站点。"""
+    """历史序列，契约 4.2。不传 station_id 就按时间戳汇总全部站点。"""
     raw_minutes = request.GET.get("minutes", "5")
     try:
         minutes = int(raw_minutes)
@@ -94,7 +94,7 @@ def series(request):
 
 
 def rank(request):
-    """站点客流排行，契约 5.3。统计窗口固定为最近 5 分钟。"""
+    """站点客流排行，契约 4.3。统计窗口固定为最近 5 分钟。"""
     raw_top = request.GET.get("top", "5")
     try:
         top = int(raw_top)
@@ -112,6 +112,26 @@ def rank(request):
     )
     top_rows = [{"station_id": r["station_id"], "passengers": r["passengers"]} for r in rows]
     return _json({"top": top_rows})
+
+
+def alert(request):
+    """客流告警判定，契约 4.4。
+
+    阈值由服务端配置（ALERT_THRESHOLD），判定也放在服务端：
+    前端只负责按 alerting 渲染横幅，不该各自持有一份阈值常量——那样改阈值、
+    或者两个页面版本不一致时就会各报警的。
+    """
+    snapshot_data = _read_snapshot()
+    current = snapshot_data["total"]
+    threshold = settings.ALERT_THRESHOLD
+    response = _json({
+        "threshold": threshold,
+        "current": current,
+        "alerting": current >= threshold,
+    })
+    # 和快照一样，告警状态每秒都在变，不能被缓存住
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 def not_found(request, exception=None):
