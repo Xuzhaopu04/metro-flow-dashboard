@@ -46,9 +46,12 @@ UC11 --> db : 按时间聚合
 UC12 --> db : 按站求和
 
 legend bottom
-  注：三个查询接口在无数据时一律返回 200 与空结构；
-  错误码仅用于参数非法(400)与未知路径(404)。
+  注：四个接口在「无数据」时一律返回 200 与空结构，不返回 404——
+  消费进程没起来不该让页面报错。
+  错误码用于三种情况：参数非法 400、路径不存在 404、服务端异常 500。
+  UC-10/UC-19 只依赖 Redis，Redis 不可用时降级为 200；
+  UC-11/UC-12 依赖 MySQL，库不可用会走向 500。
   UC-19 的阈值取自环境变量 ALERT_THRESHOLD，判定在服务端完成，
-  alerting = current >= threshold；无快照时 alerting 为 false，不返回 404。
+  alerting = current >= threshold；无快照时 alerting 为 false。
 endlegend
 @enduml
