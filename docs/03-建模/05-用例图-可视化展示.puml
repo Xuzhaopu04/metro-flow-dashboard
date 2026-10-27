@@ -14,11 +14,11 @@ actor "值班主管" as lead
 actor "数据服务模块\n(接口)" as api
 
 rectangle "可视化展示模块（web/）" {
-  usecase "UC-14 查看实时客流" as UC14
-  usecase "UC-15 按线路筛选" as UC15
-  usecase "UC-16 查看趋势与排行" as UC16
-  usecase "UC-17 接收客流告警" as UC17
-  usecase "UC-18 感知断线与恢复" as UC18
+  usecase "UC-14: 查看实时客流" as UC14
+  usecase "UC-15: 按线路筛选" as UC15
+  usecase "UC-16: 查看趋势与排行" as UC16
+  usecase "UC-17: 接收客流告警" as UC17
+  usecase "UC-18: 感知断线与恢复" as UC18
 }
 
 guard --> UC14

@@ -16,11 +16,11 @@ actor "数据服务模块\n(下游)" as api
 actor "指标库\n(MySQL)" as db
 
 rectangle "实时计算模块（stream/）" {
-  usecase "UC-05 消费事件" as UC05
-  usecase "UC-06 窗口聚合出指标" as UC06
-  usecase "UC-07 判定迟到与非法事件" as UC07
-  usecase "UC-08 写快照与落库" as UC08
-  usecase "UC-09 重启后续消费" as UC09
+  usecase "UC-05: 消费事件" as UC05
+  usecase "UC-06: 窗口聚合出指标" as UC06
+  usecase "UC-07: 判定迟到与非法事件" as UC07
+  usecase "UC-08: 写快照与写入数据库" as UC08
+  usecase "UC-09: 重启后续消费" as UC09
 }
 
 worker --> UC05
