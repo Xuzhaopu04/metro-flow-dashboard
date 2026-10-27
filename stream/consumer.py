@@ -20,7 +20,11 @@ from datetime import datetime, timedelta, timezone
 import redis
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.env import load_env  # noqa: E402
 from stream.metrics import aggregate_window, split_ready, window_start_of  # noqa: E402
+
+# 下面这些常量在模块导入时就读完，必须在此之前加载 .env
+load_env()
 
 TZ = timezone(timedelta(hours=8))
 

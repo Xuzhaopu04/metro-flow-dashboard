@@ -6,7 +6,7 @@
 
 | 日期 | 使用人 | 工具 | 环节 | 让它做了什么 | 人工改了什么 | 采纳程度 |
 |------|--------|------|------|--------------|--------------|----------|
-|  |  |  |  |  |  |  |
+| 2026-10-27 | 兰天 | TraeCode（DeepSeek-V4.1-Flash） | 编码 | 排查 .env 未生效：新增 config/env.py 最小解析，并在 settings、consumer、simulator 三个入口最早处加载 | 人工复核并验证：setdefault 优先级、BASE_DIR 定位、三处加载时机；pytest 30 passed、manage.py check 无 issue、.env 正/错密码 migrate 反证与环境变量压过 .env 均通过 | 直接采用 |
 
 ## 填写说明
 
@@ -30,3 +30,10 @@
 ```
 
 被否决的那条也要留，写明否决理由（字段名对不上契约、引入了课程不允许的依赖、把窗口值算成了累计值等），报告"教训"那段直接用。
+
+被否决的方案（2026-10-27，编码环节）：
+
+- 用 python-dotenv 加载：requirements.txt 是共享文件，加依赖要全组同意，否决。
+- 用 os.environ.update() 或直接赋值：会让 .env 压过 compose 注入的
+  MYSQL_HOST=mysql、REDIS_HOST=redis，容器模式连不上库，否决。
+- 最终采用 config/env.py + os.environ.setdefault。
