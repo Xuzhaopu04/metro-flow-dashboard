@@ -13,10 +13,10 @@ actor "系统维护者" as ops
 actor "实时计算模块\n(下游)" as calc
 
 rectangle "数据采集模块（simulator/）" {
-  usecase "UC-01 生成闸机事件" as UC01
-  usecase "UC-02 设置发送速率与数量" as UC02
-  usecase "UC-03 注入异常数据" as UC03
-  usecase "UC-04 回放历史样例" as UC04
+  usecase "UC-01: 生成闸机事件" as UC01
+  usecase "UC-02: 设置发送速率与数量" as UC02
+  usecase "UC-03: 注入异常数据" as UC03
+  usecase "UC-04: 回放历史样例" as UC04
 }
 
 ops --> UC01

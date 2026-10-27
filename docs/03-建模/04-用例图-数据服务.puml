@@ -9,29 +9,46 @@ skinparam usecase {
   BorderColor #4A6B8A
 }
 
-actor "值班员" as guard
+' 参与者统一置于系统边界左侧，外部存储归入右侧的独立矩形
 actor "值班主管" as lead
+actor "值班员" as guard
 actor "可视化展示模块\n(大屏页面)" as web
-actor "指标库\n(MySQL)" as db
-actor "快照缓存\n(Redis)" as cache
 
 rectangle "数据服务模块（api/）" {
-  usecase "UC-10 获取实时快照" as UC10
-  usecase "UC-11 查询历史序列" as UC11
-  usecase "UC-12 查询站点排行" as UC12
-  usecase "UC-13 渲染大屏页面" as UC13
+  usecase "UC-13: 渲染大屏页面" as UC13
+  usecase "UC-10: 获取实时快照" as UC10
+  usecase "UC-19: 提供告警状态" as UC19
+  usecase "UC-11: 查询历史序列" as UC11
+  usecase "UC-12: 查询站点排行" as UC12
 }
 
-guard --> UC13
-web --> UC10
-web --> UC11
-web --> UC12
+rectangle "外部存储" as ext {
+  actor "指标库\n(MySQL)" as db
+  actor "快照缓存\n(Redis)" as cache
+}
+
+' 参与者与用例的关联
 lead --> UC11
 lead --> UC12
+guard --> UC13
+web --> UC13
+web --> UC10
+web --> UC19
 
+' 页面渲染依赖快照与告警两个接口（虚线为 include）
+UC13 ..> UC10 : <<include>>
+UC13 ..> UC19 : <<include>>
+
+' 与外部存储的关系
 UC10 --> cache : 读 metric:snapshot
+UC19 --> cache : 复用快照读取
 UC11 --> db : 按时间聚合
 UC12 --> db : 按站求和
 
-UC13 ..> UC10 : <<include>>
+legend bottom
+  注：三个查询接口在无数据时一律返回 200 与空结构；
+  错误码仅用于参数非法(400)与未知路径(404)。
+  UC-19 的阈值取自环境变量 ALERT_THRESHOLD，判定在服务端完成，
+  alerting = current >= threshold；无快照时 alerting 为 false，不返回 404。
+endlegend
 @enduml
