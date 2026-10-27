@@ -7,7 +7,12 @@
 import os
 from pathlib import Path
 
+from config.env import load_env
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 必须在读任何环境变量之前加载：容器里 compose 注入的值优先级更高
+load_env()
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-do-not-use-in-production")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"

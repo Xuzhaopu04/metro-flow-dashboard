@@ -14,9 +14,17 @@ import argparse
 import json
 import os
 import random
+import sys
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config.env import load_env  # noqa: E402
+
+# 下面这些常量在模块导入时就读完，必须在此之前加载 .env
+load_env()
 
 TZ = timezone(timedelta(hours=8))
 
