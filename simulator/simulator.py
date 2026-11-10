@@ -33,15 +33,10 @@ REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 EVENT_STREAM = os.environ.get("EVENT_STREAM", "gate_events")
 STREAM_MAXLEN = 100000
 
-# 站点:(线路, 客流权重)。A 线是主干线，人比 B 线多
-STATIONS = {
-    "A01": ("L1", 0.24),
-    "A02": ("L1", 0.18),
-    "A03": ("L1", 0.12),
-    "B01": ("L2", 0.16),
-    "B02": ("L2", 0.10),
-    "B03": ("L2", 0.20),
-}
+# 站点表外置到 stations.json，改站点不碰代码；A 线是主干线，权重比 B 线高
+_STATIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stations.json")
+with open(_STATIONS_FILE, encoding="utf-8") as _fp:
+    STATIONS = json.load(_fp)
 
 # 早高峰进站多，晚高峰出站多，平时各半
 PEAK_HOURS_IN = range(7, 10)
@@ -50,7 +45,7 @@ PEAK_HOURS_OUT = range(17, 20)
 
 def pick_station():
     ids = list(STATIONS)
-    weights = [STATIONS[s][1] for s in ids]
+    weights = [STATIONS[s]["weight"] for s in ids]
     return random.choices(ids, weights=weights)[0]
 
 
@@ -66,7 +61,7 @@ def pick_direction(now):
 def make_event(now=None):
     now = now or datetime.now(TZ)
     station_id = pick_station()
-    line_id = STATIONS[station_id][0]
+    line_id = STATIONS[station_id]["line_id"]
     direction = pick_direction(now)
     # 高峰期单笔刷卡带的人也多一些
     upper = 5 if now.hour in PEAK_HOURS_IN or now.hour in PEAK_HOURS_OUT else 3
@@ -81,7 +76,7 @@ def make_event(now=None):
 
 
 def corrupt(event, now):
-    """按契约 2.3 造两类异常：缺字段、乱序。"""
+    """按契约 2.2 造两类异常：缺字段、乱序。"""
     kind = random.choice(["missing_field", "out_of_order"])
     if kind == "missing_field":
         event.pop(random.choice(["passengers", "event_time"]), None)
@@ -99,7 +94,11 @@ def emit(client, event, dry_run):
 
 
 def replay(args, client):
-    """按原时间间隔重放样例文件，用于演示和回归。"""
+    """按原时间间隔重放样例文件，用于演示和回归。
+
+    样例里的绝对时间戳不能直接用（回放出来全是历史时间），
+    所以把第一条对齐到当前时间，后续按原相对间隔顺延。
+    """
     with open(args.replay, encoding="utf-8") as fp:
         events = [json.loads(line) for line in fp if line.strip()]
     if not events:
@@ -108,13 +107,21 @@ def replay(args, client):
 
     speed = max(args.speed, 0.01)
     print(f"回放 {len(events)} 条，倍速 {speed}")
+
+    # 整体平移：offset = 当前时间 - 样例首条时间，每条都加这个 offset
+    now = datetime.now(TZ)
+    first_stamp = datetime.fromisoformat(events[0]["event_time"])
+    offset = now - first_stamp
+
     previous = None
     sent = 0
     for event in events:
-        stamp = datetime.fromisoformat(event["event_time"])
+        original = datetime.fromisoformat(event["event_time"])
+        shifted = original + offset
+        event["event_time"] = shifted.isoformat(timespec="milliseconds")
         if previous is not None:
-            time.sleep(max(0.0, (stamp - previous).total_seconds() / speed))
-        previous = stamp
+            time.sleep(max(0.0, (shifted - previous).total_seconds() / speed))
+        previous = shifted
         emit(client, event, args.dry_run)
         sent += 1
         print(f"[{sent}] {event['station_id']} {event['event_type']} {event.get('passengers')}人")
