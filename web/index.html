@@ -8,36 +8,117 @@
   <script src="https://registry.npmmirror.com/vue/3.5.13/files/dist/vue.global.prod.js"></script>
   <script src="https://registry.npmmirror.com/echarts/5.5.1/files/dist/echarts.min.js"></script>
   <style>
-    :root { --bg: #0f172a; --panel: #182335; --line: #243349; --text: #e2e8f0; --muted: #7c8ba1; --accent: #38bdf8; --alert: #ef4444; }
+    :root {
+      --bg: #0b1220; --panel: #131d2e; --line: #22314a;
+      --text: #e2e8f0; --muted: #7c8ba1;
+      --accent: #38bdf8; --violet: #a78bfa; --ok: #22c55e; --warn: #f59e0b; --alert: #ef4444;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--text);
-           font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; }
-    #app { max-width: 1280px; margin: 0 auto; padding: 20px 24px 28px; }
-    header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-    h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: 1px; }
-    .stat { font-size: 13px; color: var(--muted); }
-    .stat b { font-size: 26px; color: var(--accent); font-weight: 600; margin: 0 4px; }
-    .alert { background: rgba(239,68,68,.15); border: 1px solid var(--alert); color: #fca5a5;
-             padding: 8px 14px; border-radius: 6px; font-size: 13px; margin-top: 14px; }
-    .grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; margin-top: 16px; }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
-    .card h2 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0 0 12px; letter-spacing: .5px; }
-    .toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
+    /* 顶部一层很淡的径向光，避免纯色背景显得像半成品；fixed 让滚动时不出接缝 */
+    body { margin: 0; color: var(--text); font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+           background-color: var(--bg);
+           background-image: radial-gradient(1100px 520px at 50% -8%, #16253c 0%, rgba(11,18,32,0) 62%);
+           background-attachment: fixed; }
+    #app { max-width: 1400px; margin: 0 auto; padding: 22px 26px 30px; }
+
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand .bar { width: 4px; height: 32px; border-radius: 2px;
+                  background: linear-gradient(180deg, var(--accent), rgba(56,189,248,0)); }
+    .brand h1 { font-size: 21px; font-weight: 600; margin: 0; letter-spacing: 1px; }
+    .brand .sub { font-size: 10px; letter-spacing: 3px; color: var(--muted); margin-top: 3px; }
+    .head-right { display: flex; align-items: center; gap: 12px; }
+    .clock { font-size: 20px; letter-spacing: 1px; font-variant-numeric: tabular-nums; color: #cbd5e1; }
+    .pill { display: inline-flex; align-items: center; font-size: 12px; color: var(--muted);
+            border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; background: var(--panel); }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+    .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(34,197,94,.12); }
+    .dot.bad { background: var(--alert); animation: blink 1s steps(2, start) infinite; }
+    @keyframes blink { 50% { opacity: .25; } }
+
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; margin-top: 18px; }
+    .kpi { position: relative; background: var(--panel); border: 1px solid var(--line);
+           border-radius: 10px; padding: 12px 16px 14px; overflow: hidden; }
+    /* 左侧色条用来区分指标类别，比整块染色克制 */
+    .kpi::before { content: ""; position: absolute; left: 0; top: 13px; bottom: 13px; width: 3px;
+                   border-radius: 2px; background: var(--accent); opacity: .8; }
+    .kpi .k { font-size: 12px; color: var(--muted); }
+    .kpi .v { font-size: 26px; font-weight: 600; margin-top: 5px; color: #f8fafc;
+              font-variant-numeric: tabular-nums; line-height: 1.15; }
+    .kpi .v small { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+    .kpi.accent .v { color: var(--accent); }
+    .kpi.violet::before { background: var(--violet); }
+    .kpi.violet .v { color: var(--violet); }
+    .kpi.warn::before { background: var(--warn); }
+    .kpi.warn .v { color: var(--warn); }
+    .kpi.red::before { background: var(--alert); }
+    .kpi.red .v { color: #f87171; }
+    /* 告警时客流卡片同步变红，不用只看顶部横幅 */
+    .kpi.alerting { border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.07); }
+    .kpi.alerting .v { color: #fca5a5; }
+    .kpi.alerting::before { background: var(--alert); }
+
+    .alert { display: flex; align-items: center; margin-top: 14px; padding: 10px 16px; border-radius: 8px;
+             font-size: 13px; color: #fca5a5; background: rgba(239,68,68,.13);
+             border: 1px solid rgba(239,68,68,.55); animation: breathe 2.4s ease-in-out infinite; }
+    .alert .dot { margin-right: 10px; }
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.32); }
+      50% { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
+    }
+
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; margin-top: 16px; }
+    @media (max-width: 1080px) {
+      .grid { grid-template-columns: minmax(0, 1fr); }
+      .chart { height: 260px !important; }
+      .clock { display: none; }
+    }
+
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+    /* 排行内容比左侧柱状图短，让脚注沉到底部，右侧卡片不会拖出一大块空白 */
+    .rank-card { display: flex; flex-direction: column; }
+    .rank-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line);
+                 font-size: 11px; color: #5d6b80; line-height: 1.6; }
+    .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .card h2 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0; letter-spacing: .5px; }
+    .hint { font-size: 11px; color: #5d6b80; }
+    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 7px; }
+    .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+    .toolbar { display: flex; gap: 6px; }
     .tab { padding: 4px 12px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
-           font-size: 12px; color: var(--muted); background: transparent; }
-    .tab.on { color: var(--accent); border-color: var(--accent); }
-    .chart { width: 100%; height: 300px; }
-    .chart.slim { height: 190px; }
-    ol { list-style: none; margin: 0; padding: 0; }
-    ol li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
-    ol li:last-child { border-bottom: none; }
-    .no { width: 18px; color: var(--muted); font-size: 12px; }
-    .name { flex: 1; }
-    .num { color: var(--accent); font-variant-numeric: tabular-nums; }
+           font-size: 12px; color: var(--muted); background: transparent; transition: all .15s; }
+    .tab:hover { color: #cbd5e1; border-color: #33455f; }
+    .tab.on { color: var(--accent); border-color: var(--accent); background: rgba(56,189,248,.08); }
+
+    /* 图表和空状态叠在同一个容器里，数据没到时给提示而不是一片空白 */
+    .chart-wrap { position: relative; margin-top: 6px; }
+    .chart { width: 100%; height: 316px; }
+    .chart.slim { height: 198px; }
+    .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+             font-size: 13px; color: var(--muted); pointer-events: none; }
+
+    ol.rank { list-style: none; margin: 8px 0 0; padding: 0; }
+    ol.rank li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px;
+                 align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    ol.rank li:last-child { border-bottom: none; }
+    .badge { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
+             font-size: 11px; color: var(--muted); background: rgba(255,255,255,.05); }
+    .badge.top1 { color: var(--accent); background: rgba(56,189,248,.15); }
+    .badge.top2 { color: var(--violet); background: rgba(167,139,250,.15); }
+    .badge.top3 { color: var(--warn); background: rgba(245,158,11,.15); }
+    .rank-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .rank-name { color: #cbd5e1; }
+    .rank-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.06); overflow: hidden; }
+    .rank-bar > span { display: block; height: 100%; border-radius: 2px;
+                       background: linear-gradient(90deg, var(--accent), var(--violet)); transition: width .45s ease; }
+    .rank-num { color: var(--accent); font-variant-numeric: tabular-nums; }
+    .rank-empty { display: block; color: var(--muted); font-size: 13px; padding: 18px 0; grid-template-columns: unset; }
+
     footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px;
              font-size: 12px; color: var(--muted); flex-wrap: wrap; }
-    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
-    .dot.ok { background: #22c55e; } .dot.bad { background: var(--alert); }
+    .fresh.warn { color: var(--warn); }
+    .fresh.bad { color: var(--alert); }
   </style>
 </head>
 <body>
@@ -45,45 +126,103 @@
 {% verbatim %}
 <div id="app">
   <header>
-    <h1>实时客流监测</h1>
-    <div class="stat">当前客流<b>{{ total }}</b>人次 / 秒</div>
+    <div class="brand">
+      <span class="bar"></span>
+      <div>
+        <h1>实时客流监测</h1>
+        <div class="sub">METRO FLOW DASHBOARD</div>
+      </div>
+    </div>
+    <div class="head-right">
+      <span class="clock">{{ clock }}</span>
+      <span class="pill"><span class="dot" :class="online ? 'ok' : 'bad'"></span>{{ online ? '实时连接' : '连接中断，正在重试' }}</span>
+    </div>
   </header>
 
-  <div class="alert" v-if="alerting">客流告警：当前 {{ total }} 人次/秒，已超过阈值 {{ threshold }}</div>
+  <div class="kpis">
+    <div class="kpi accent" :class="{ alerting: alerting }">
+      <div class="k">实时客流</div>
+      <div class="v">{{ total }}<small>人次/秒</small></div>
+    </div>
+    <div class="kpi">
+      <div class="k">活跃站点</div>
+      <div class="v">{{ stationCount }}<small>个</small></div>
+    </div>
+    <div class="kpi violet">
+      <div class="k">告警阈值</div>
+      <div class="v">{{ threshold }}<small>人次/秒</small></div>
+    </div>
+    <div class="kpi warn">
+      <div class="k">迟到事件</div>
+      <div class="v">{{ lateCount }}<small>条</small></div>
+    </div>
+    <div class="kpi red">
+      <div class="k">非法事件</div>
+      <div class="v">{{ invalidCount }}<small>条</small></div>
+    </div>
+  </div>
+
+  <div class="alert" v-if="alerting">
+    <span class="dot bad"></span>客流告警：当前 {{ total }} 人次/秒，已超过阈值 {{ threshold }}
+  </div>
 
   <div class="grid">
     <section class="card">
-      <h2>各站实时客流</h2>
-      <div class="toolbar">
-        <button v-for="opt in lineOptions" :key="opt.value"
-                class="tab" :class="{ on: line === opt.value }"
-                @click="line = opt.value">{{ opt.label }}</button>
+      <div class="card-head">
+        <div>
+          <h2>各站实时客流</h2>
+          <div class="legend" v-if="line === 'all'">
+            <span><i style="background:#38bdf8"></i>1 号线</span>
+            <span><i style="background:#a78bfa"></i>2 号线</span>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button v-for="opt in lineOptions" :key="opt.value"
+                  class="tab" :class="{ on: line === opt.value }"
+                  @click="line = opt.value">{{ opt.label }}</button>
+        </div>
       </div>
-      <div class="chart" ref="barEl"></div>
+      <div class="chart-wrap">
+        <div class="chart" ref="barEl"></div>
+        <div class="empty" v-if="!visibleStations.length">{{ online ? '等待数据…' : '连接中断' }}</div>
+      </div>
     </section>
 
-    <aside class="card">
-      <h2>近 5 分钟客流排行</h2>
-      <ol>
+    <aside class="card rank-card">
+      <div class="card-head">
+        <h2>近 5 分钟客流排行</h2>
+        <span class="hint">TOP 5</span>
+      </div>
+      <ol class="rank">
         <li v-for="(item, index) in rank" :key="item.station_id">
-          <span class="no">{{ index + 1 }}</span>
-          <span class="name">{{ item.station_id }}</span>
-          <span class="num">{{ item.passengers }}</span>
+          <span class="badge" :class="'top' + (index + 1)">{{ index + 1 }}</span>
+          <div class="rank-main">
+            <span class="rank-name">{{ item.station_id }}</span>
+            <div class="rank-bar"><span :style="{ width: barWidth(item.passengers) }"></span></div>
+          </div>
+          <span class="rank-num">{{ item.passengers }}</span>
         </li>
-        <li v-if="!rank.length" style="color: var(--muted)">暂无数据</li>
+        <li class="rank-empty" v-if="!rank.length">暂无数据</li>
       </ol>
+      <div class="rank-foot">按最近 5 分钟累计客流排序<br>排行与趋势每 5 秒刷新</div>
     </aside>
   </div>
 
   <section class="card" style="margin-top: 16px">
-    <h2>近 5 分钟客流趋势</h2>
-    <div class="chart slim" ref="lineEl"></div>
+    <div class="card-head">
+      <h2>近 5 分钟客流趋势</h2>
+      <span class="hint">虚线为当前告警阈值</span>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart slim" ref="lineEl"></div>
+      <div class="empty" v-if="!trends.length">暂无历史数据</div>
+    </div>
   </section>
 
   <footer>
-    <span><span class="dot" :class="online ? 'ok' : 'bad'"></span>{{ online ? '实时连接' : '连接中断，正在重试' }}</span>
-    <span>{{ snapshotTs ? '数据时间 ' + snapshotTs : '等待数据' }}</span>
-    <span>迟到 {{ lateCount }} 条 · 非法 {{ invalidCount }} 条</span>
+    <span>数据时间 {{ snapshotLabel }}</span>
+    <span class="fresh" :class="freshLevel">{{ freshText }}</span>
+    <span>窗口 1 秒 · 趋势回溯 5 分钟 · 排行统计最近 5 分钟</span>
   </footer>
 </div>
 {% endverbatim %}
@@ -91,10 +230,19 @@
 <script>
 const { createApp, ref, computed, watch, onMounted, onUnmounted } = Vue;
 
-const THRESHOLD = 100;          // 单窗口客流告警阈值，后续做成可配置
 const SNAPSHOT_MS = 1000;       // 快照刷新间隔
 const HISTORY_MS = 5000;        // 历史与排行刷新间隔，没必要每秒查库
-const AXIS = { axisLine: { lineStyle: { color: "#243349" } }, axisLabel: { color: "#7c8ba1" } };
+const LINE_COLORS = { L1: "#38bdf8", L2: "#a78bfa" };  // 与图例、柱色同一份来源，改色只改这里
+const PANEL_TOOLTIP = {
+  backgroundColor: "#0f1a2c", borderColor: "#243349", borderWidth: 1,
+  textStyle: { color: "#e2e8f0", fontSize: 12 }, padding: [8, 12]
+};
+const AXIS = {
+  axisLine: { lineStyle: { color: "#243349" } },
+  axisTick: { show: false },
+  axisLabel: { color: "#7c8ba1", fontSize: 11 }
+};
+const SPLIT_LINE = { lineStyle: { color: "#1c2942", type: "dashed" } };
 
 createApp({
   setup() {
@@ -109,18 +257,53 @@ createApp({
     const line = ref("all");
     const barEl = ref(null);
     const lineEl = ref(null);
+    // 契约 4.1 写明前端不要写死阈值：这里只是首帧占位，真实值由 /api/snapshot 下发
+    const threshold = ref(100);
+    const alerting = ref(false);
+    const now = ref(Date.now());
 
     const lineOptions = [
       { value: "all", label: "全部线路" },
       { value: "L1", label: "1 号线" },
       { value: "L2", label: "2 号线" }
     ];
-    const threshold = THRESHOLD;
-    const alerting = computed(() => total.value >= THRESHOLD);
 
     let barChart = null;
     let trendChart = null;
     let timers = [];
+    let observer = null;
+
+    const clock = computed(() => new Date(now.value).toTimeString().slice(0, 8));
+    const stationCount = computed(() => stations.value.length);
+    const visibleStations = computed(() =>
+      line.value === "all" ? stations.value : stations.value.filter(s => s.line_id === line.value)
+    );
+    const snapshotLabel = computed(() => (snapshotTs.value ? snapshotTs.value.slice(11, 19) : "—"));
+    const rankMax = computed(() => Math.max(1, ...rank.value.map(item => item.passengers)));
+
+    // 快照是 1 秒窗口，停更超过 10 秒基本就是采集或消费断了，用颜色把这件事说出来
+    const age = computed(() => {
+      if (!snapshotTs.value) return null;
+      const stamp = Date.parse(snapshotTs.value);
+      return Number.isNaN(stamp) ? null : Math.max(0, Math.round((now.value - stamp) / 1000));
+    });
+    const freshText = computed(() => {
+      if (age.value === null) return "等待数据";
+      if (age.value <= 1) return "刚刚更新";
+      // 超过一分钟换成分钟，否则停更久了会显示成 3000 多秒，读起来费劲
+      if (age.value >= 60) return Math.floor(age.value / 60) + " 分钟前更新";
+      return age.value + " 秒前更新";
+    });
+    const freshLevel = computed(() => {
+      if (age.value === null) return "";
+      if (age.value > 30) return "bad";
+      return age.value > 10 ? "warn" : "";
+    });
+
+    function barWidth(passengers) {
+      // 留 4% 下限，否则小客流的名次条几乎看不见
+      return Math.max(4, Math.round((passengers / rankMax.value) * 100)) + "%";
+    }
 
     async function getJSON(url) {
       const res = await fetch(url, { cache: "no-store" });
@@ -137,6 +320,8 @@ createApp({
         lateCount.value = data.late_count || 0;
         invalidCount.value = data.invalid_count || 0;
         stations.value = Array.isArray(data.stations) ? data.stations : [];
+        if (Number.isFinite(data.threshold)) threshold.value = data.threshold;
+        alerting.value = data.alerting === true;
         drawBars();
       } catch (e) {
         online.value = false;
@@ -157,23 +342,43 @@ createApp({
       }
     }
 
-    const visibleStations = computed(() =>
-      line.value === "all" ? stations.value : stations.value.filter(s => s.line_id === line.value)
-    );
-
     function drawBars() {
       if (!barChart) return;
       const rows = visibleStations.value;
+      // 全部线路时按线路着色，单线路时统一用主色，避免柱子和图例对不上
+      const data = rows.map(s => ({
+        value: s.passengers,
+        itemStyle: {
+          color: line.value === "all" ? (LINE_COLORS[s.line_id] || "#38bdf8") : "#38bdf8",
+          borderRadius: [4, 4, 0, 0]
+        }
+      }));
       barChart.setOption({
-        tooltip: { trigger: "axis" },
-        grid: { left: 44, right: 16, top: 16, bottom: 28 },
+        animationDuration: 400,
+        animationDurationUpdate: 300,
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "shadow", shadowStyle: { color: "rgba(56,189,248,.06)" } },
+          ...PANEL_TOOLTIP,
+          formatter: items => {
+            const row = rows[items[0].dataIndex];
+            const lineName = row.line_id === "L1" ? "1 号线" : row.line_id === "L2" ? "2 号线" : "";
+            return row.station_id + (lineName ? " · " + lineName : "") +
+                   "<br/>客流 <b style='color:#38bdf8'>" + row.passengers + "</b> 人次/秒";
+          }
+        },
+        grid: { left: 48, right: 22, top: 28, bottom: 30 },
         xAxis: { type: "category", data: rows.map(s => s.station_id), ...AXIS },
-        yAxis: { type: "value", name: "人次", nameTextStyle: { color: "#7c8ba1" }, splitLine: { lineStyle: { color: "#1f2c40" } }, ...AXIS },
+        yAxis: {
+          type: "value", name: "人次/秒", minInterval: 1,
+          nameTextStyle: { color: "#7c8ba1", fontSize: 11 },
+          splitLine: SPLIT_LINE, ...AXIS
+        },
         series: [{
           type: "bar",
-          barMaxWidth: 42,
-          data: rows.map(s => s.passengers),
-          itemStyle: { color: "#38bdf8", borderRadius: [3, 3, 0, 0] }
+          barMaxWidth: 46,
+          data: data,
+          label: { show: true, position: "top", color: "#94a3b8", fontSize: 11 }
         }]
       });
     }
@@ -181,53 +386,86 @@ createApp({
     function drawTrend() {
       if (!trendChart) return;
       const points = trends.value;
+      const lineSeries = {
+        type: "line",
+        smooth: true,
+        showSymbol: false,
+        data: points.map(p => p.passengers),
+        lineStyle: { color: "#38bdf8", width: 2 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(56,189,248,.28)" },
+            { offset: 1, color: "rgba(56,189,248,0)" }
+          ])
+        }
+      };
+      // 阈值线只在有阈值时画，否则会在 0 处多出一条误导性的虚线
+      if (threshold.value > 0) {
+        lineSeries.markLine = {
+          silent: true, symbol: "none",
+          label: { formatter: "阈值 " + threshold.value, color: "#f87171", fontSize: 11, position: "insideEndTop" },
+          lineStyle: { color: "rgba(239,68,68,.55)", type: "dashed" },
+          data: [{ yAxis: threshold.value }]
+        };
+      }
       trendChart.setOption({
-        tooltip: { trigger: "axis" },
-        grid: { left: 44, right: 16, top: 16, bottom: 28 },
-        xAxis: {
-          type: "category",
-          data: points.map(p => p.ts.slice(11, 19)),
-          boundaryGap: false,
-          ...AXIS
+        animationDuration: 400,
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "line", lineStyle: { color: "rgba(56,189,248,.45)", type: "dashed" } },
+          ...PANEL_TOOLTIP,
+          formatter: items => {
+            const p = points[items[0].dataIndex];
+            return p.ts.slice(11, 19) + "<br/>客流 <b style='color:#38bdf8'>" + p.passengers + "</b> 人次/秒";
+          }
         },
-        yAxis: { type: "value", name: "人次", nameTextStyle: { color: "#7c8ba1" }, splitLine: { lineStyle: { color: "#1f2c40" } }, ...AXIS },
-        series: [{
-          type: "line",
-          smooth: true,
-          showSymbol: false,
-          data: points.map(p => p.passengers),
-          lineStyle: { color: "#38bdf8", width: 2 },
-          areaStyle: { color: "rgba(56,189,248,.12)" }
-        }]
+        grid: { left: 48, right: 44, top: 30, bottom: 26 },
+        xAxis: {
+          // 左右各留 1%：最后一个时间标签居中在端点，不留白会被容器边缘裁掉半个
+          type: "category", boundaryGap: ["1%", "1%"], data: points.map(p => p.ts.slice(11, 19)), ...AXIS,
+          // 5 分钟 1 秒一个点最多 300 个，标签交给 ECharts 自动抽稀，别叠成一团
+          axisLabel: { ...AXIS.axisLabel, hideOverlap: true }
+        },
+        yAxis: {
+          type: "value", name: "人次/秒", minInterval: 1,
+          nameTextStyle: { color: "#7c8ba1", fontSize: 11 },
+          splitLine: SPLIT_LINE, ...AXIS
+        },
+        series: [lineSeries]
       });
     }
 
     watch(line, drawBars);
+    // 阈值可能随环境变量热改，拿到新值就重画，否则参考线要等下一轮历史刷新
+    watch(threshold, drawTrend);
 
     onMounted(() => {
       barChart = echarts.init(barEl.value);
       trendChart = echarts.init(lineEl.value);
-      window.addEventListener("resize", resize);
+      // 用 ResizeObserver 盯容器，比只听 window.resize 更准（侧栏折叠、字体变化也能触发）
+      observer = new ResizeObserver(() => {
+        barChart && barChart.resize();
+        trendChart && trendChart.resize();
+      });
+      observer.observe(barEl.value);
+      observer.observe(lineEl.value);
       loadSnapshot();
       loadHistory();
       timers.push(setInterval(loadSnapshot, SNAPSHOT_MS));
       timers.push(setInterval(loadHistory, HISTORY_MS));
+      timers.push(setInterval(() => { now.value = Date.now(); }, 1000));
     });
 
     onUnmounted(() => {
       timers.forEach(clearInterval);
-      window.removeEventListener("resize", resize);
+      observer && observer.disconnect();
       barChart && barChart.dispose();
       trendChart && trendChart.dispose();
     });
 
-    function resize() {
-      barChart && barChart.resize();
-      trendChart && trendChart.resize();
-    }
-
-    return { total, snapshotTs, lateCount, invalidCount, rank, online, line, lineOptions,
-             threshold, alerting, barEl, lineEl };
+    return { total, snapshotTs, lateCount, invalidCount, rank, trends, online, line, lineOptions,
+             threshold, alerting, clock, stationCount, visibleStations, snapshotLabel,
+             freshText, freshLevel, barWidth, barEl, lineEl };
   }
 }).mount("#app");
 </script>
