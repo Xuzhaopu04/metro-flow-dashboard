@@ -7,6 +7,7 @@ import json
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.db import DatabaseError
 from django.utils import timezone
 
@@ -58,7 +59,67 @@ def test_snapshot_returns_redis_payload(client, fake_redis):
                "stations": [{"station_id": "A01", "line_id": "L1", "passengers": 12}],
                "late_count": 1, "invalid_count": 0}
     fake_redis(json.dumps(payload))
-    assert client.get("/api/snapshot").json() == payload
+    body = client.get("/api/snapshot").json()
+    # Redis 里存的是 5 个字段，接口层要原样带出来，不多不少
+    for key, value in payload.items():
+        assert body[key] == value
+
+
+def test_snapshot_adds_alert_fields(client, fake_redis):
+    """快照响应必须带 alerting 与 threshold，契约 4.1。"""
+    fake_redis(json.dumps({"ts": None, "total": 1, "stations": [],
+                           "late_count": 0, "invalid_count": 0}))
+    body = client.get("/api/snapshot").json()
+    assert set(body) == {"ts", "total", "stations", "late_count",
+                         "invalid_count", "alerting", "threshold"}
+    assert body["alerting"] is False
+    assert body["threshold"] == settings.ALERT_THRESHOLD
+
+
+def test_snapshot_alerts_when_total_reaches_threshold(client, fake_redis, monkeypatch):
+    """恰好等于阈值也要告警（>= 而非 >）。"""
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 100)
+    fake_redis(json.dumps({"ts": None, "total": 100, "stations": [],
+                           "late_count": 0, "invalid_count": 0}))
+    assert client.get("/api/snapshot").json()["alerting"] is True
+
+
+def test_snapshot_does_not_alert_below_threshold(client, fake_redis, monkeypatch):
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 100)
+    fake_redis(json.dumps({"ts": None, "total": 99, "stations": [],
+                           "late_count": 0, "invalid_count": 0}))
+    assert client.get("/api/snapshot").json()["alerting"] is False
+
+
+def test_alert_follows_live_config_not_snapshot(client, fake_redis, monkeypatch):
+    """阈值改了要立刻生效，不能沿用写快照时的旧判断。
+
+    消费者根本不知道阈值，所以 alerting 只能由接口层现算。
+    """
+    payload = {"ts": None, "total": 50, "stations": [],
+               "late_count": 0, "invalid_count": 0}
+    fake_redis(json.dumps(payload))
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 100)
+    assert client.get("/api/snapshot").json()["alerting"] is False
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 10)
+    body = client.get("/api/snapshot").json()
+    assert body["alerting"] is True
+    assert body["threshold"] == 10
+
+
+def test_empty_snapshot_has_alert_fields(client):
+    """Redis 里没数据时同样要给告警字段，前端不该在这里分支。"""
+    body = client.get("/api/snapshot").json()
+    assert body["alerting"] is False
+    assert body["threshold"] == settings.ALERT_THRESHOLD
+
+
+def test_normalize_snapshot_ignores_upstream_alert_fields():
+    """上游若擅自写了 alerting，以服务端现算的为准。"""
+    dirty = {"total": 5, "alerting": True, "threshold": 1}
+    result = views.normalize_snapshot(dirty)
+    assert result["alerting"] is False
+    assert result["threshold"] == settings.ALERT_THRESHOLD
 
 
 def test_snapshot_falls_back_on_broken_json(client, fake_redis):

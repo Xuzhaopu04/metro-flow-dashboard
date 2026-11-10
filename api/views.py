@@ -70,9 +70,27 @@ def error_response(code, message, status):
     return json_response({"error": {"code": code, "message": message}}, status)
 
 
+def alert_state(total, threshold):
+    """按契约 4.1 计算告警字段。
+
+    判定放在服务端（责任矩阵接口点 ④"谁写=服务"）：阈值改一次配置就全站生效，
+    不用动消费者，也不用重新发前端。
+
+    用 >= 而不是 >：恰好等于阈值也算告警。前端原先写的就是 >=，
+    这里保持一致；把边界值判成"安全"在演示时最容易说不清。
+    """
+    return {"alerting": total >= threshold, "threshold": threshold}
+
+
 def empty_snapshot():
-    """空快照。每次返回新对象——共享可变默认值迟早被某次改动写脏。"""
-    return {"ts": None, "total": 0, "stations": [], "late_count": 0, "invalid_count": 0}
+    """空快照。每次返回新对象——共享可变默认值迟早被某次改动写脏。
+
+    无数据时同样要带告警字段：前端只认一个响应形状，不该在这里分支。
+    阈值若被配成 0 则 0 >= 0 也会告警，这是配置问题，如实反映即可。
+    """
+    snapshot = {"ts": None, "total": 0, "stations": [], "late_count": 0, "invalid_count": 0}
+    snapshot.update(alert_state(0, settings.ALERT_THRESHOLD))
+    return snapshot
 
 
 def normalize_snapshot(payload):
@@ -80,14 +98,20 @@ def normalize_snapshot(payload):
 
     快照是跨进程传过来的 JSON，缺一个键前端就读到 undefined 并画出空白图表。
     上游写坏了是上游的问题，但页面白屏会被记成接口的锅，所以这里兜住。
+
+    告警字段不取上游的值，一律按当前配置重算。消费者写快照时并不知道阈值，
+    若采信它写的 alerting，阈值一改页面就挂着过期的判断。
     """
-    return {
+    total = payload.get("total") or 0
+    snapshot = {
         "ts": payload.get("ts"),
-        "total": payload.get("total") or 0,
+        "total": total,
         "stations": payload.get("stations") or [],
         "late_count": payload.get("late_count") or 0,
         "invalid_count": payload.get("invalid_count") or 0,
     }
+    snapshot.update(alert_state(total, settings.ALERT_THRESHOLD))
+    return snapshot
 
 
 def read_snapshot():
