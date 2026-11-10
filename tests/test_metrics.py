@@ -88,3 +88,83 @@ def test_top_stations_truncates():
     stations = [{"station_id": f"A0{i}", "passengers": 10 - i} for i in range(1, 7)]
     assert [s["station_id"] for s in top_stations(stations, 2)] == ["A01", "A02"]
     assert top_stations(stations, 0) == []
+
+
+# ---- 以下三个测试来自"口径一致性约束"和"边界规则"（docs/02-设计/指标口径.md §3-4）----
+
+def test_line_id_missing_defaults_to_empty():
+    """指标口径 §3：line_id 缺失时该站 line_id 记为 ""，不影响客流统计。"""
+    # 用 hand-crafted event，line_id 字段完全不存在
+    no_line_event = {
+        "event_id": "t-no-line",
+        "station_id": "X01",
+        "event_type": "in",
+        "passengers": 3,
+        "event_time": START.isoformat(timespec="milliseconds"),
+    }
+    result = aggregate_window([no_line_event], START)
+    assert result["total"] == 3
+    assert len(result["stations"]) == 1
+    assert result["stations"][0] == {"station_id": "X01", "line_id": "", "passengers": 3}
+    # 不能算成非法事件
+    assert result["invalid_count"] == 0
+
+
+def test_line_id_blank_string_or_none_defaults_to_empty():
+    """line_id 为空串或 None 时，也要归一成 ""。"""
+    blank = {
+        "event_id": "t-blank", "station_id": "X02", "line_id": "",
+        "event_type": "in", "passengers": 1,
+        "event_time": START.isoformat(timespec="milliseconds"),
+    }
+    none_val = {
+        "event_id": "t-none", "station_id": "X03", "line_id": None,
+        "event_type": "in", "passengers": 1,
+        "event_time": START.isoformat(timespec="milliseconds"),
+    }
+    result = aggregate_window([blank, none_val], START)
+    # 两个站都应该出现，line_id 都是 ""
+    assert len(result["stations"]) == 2
+    for s in result["stations"]:
+        assert s["line_id"] == ""
+
+
+def test_total_equals_sum_of_stations_passengers():
+    """指标口径 §4 一致性约束：同一窗口内 total == sum(stations[].passengers)。"""
+    events = [
+        event("A01", passengers=2, offset_ms=100),
+        event("A01", passengers=3, offset_ms=200),
+        event("B01", "L2", passengers=1, offset_ms=300),
+        event("C01", "L3", passengers=4, offset_ms=400),
+        # 混入一个迟到事件，确认不会算进 total 也不会进 stations
+    ]
+    late = (START - timedelta(seconds=5)).isoformat(timespec="milliseconds")
+    events.append(event("A01", passengers=99, event_time=late))
+
+    result = aggregate_window(events, START)
+    assert result["total"] == sum(s["passengers"] for s in result["stations"])
+    assert result["total"] == 10  # 2+3+1+4，迟到的 99 不算
+    assert result["late_count"] == 1
+
+
+def test_result_structure_matches_contract_v1_1():
+    """契约 v1.1：聚合结果要能被 build_snapshot 直接序列化成快照。
+
+    这里验的是 aggregate_window 返回的 dict 结构，与 build_snapshot 消费的字段对齐。
+    """
+    result = aggregate_window([event()], START)
+    # 顶层键：快照用的五个 + 内部 late_by_station（不落快照）
+    expected_keys = {"total", "stations", "late_count", "invalid_count", "late_by_station"}
+    assert set(result.keys()) == expected_keys
+    # stations 内每个元素的字段必须与契约 3 的 stations[] 完全一致
+    for s in result["stations"]:
+        assert set(s.keys()) == {"station_id", "line_id", "passengers"}
+    # 数值类型必须是 int，不能是 str / float
+    assert isinstance(result["total"], int)
+    assert isinstance(result["late_count"], int)
+    assert isinstance(result["invalid_count"], int)
+    for s in result["stations"]:
+        assert isinstance(s["passengers"], int)
+    # 空窗口时 stations 是空 list
+    empty = aggregate_window([], START)
+    assert empty["stations"] == []
