@@ -1,0 +1,8 @@
+{
+  "A01": {"line_id": "L1", "weight": 0.24},
+  "A02": {"line_id": "L1", "weight": 0.18},
+  "A03": {"line_id": "L1", "weight": 0.12},
+  "B01": {"line_id": "L2", "weight": 0.16},
+  "B02": {"line_id": "L2", "weight": 0.10},
+  "B03": {"line_id": "L2", "weight": 0.20}
+}

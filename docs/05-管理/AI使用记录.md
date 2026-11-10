@@ -7,6 +7,7 @@
 | 日期 | 使用人 | 工具 | 环节 | 让它做了什么 | 人工改了什么 | 采纳程度 |
 |------|--------|------|------|--------------|--------------|----------|
 | 2026-10-27 | 兰天 | TraeCode（DeepSeek-V4.1-Flash） | 编码 | 排查 .env 未生效：新增 config/env.py 最小解析，并在 settings、consumer、simulator 三个入口最早处加载 | 人工复核并验证：setdefault 优先级、BASE_DIR 定位、三处加载时机；pytest 30 passed、manage.py check 无 issue、.env 正/错密码 migrate 反证与环境变量压过 .env 均通过 | 直接采用 |
+| 2026-11-10 | 林世韬 | TraeCode（DeepSeek-V4.1-Flash） | 编码 | 采集模块整改：站点配置外置 stations.json、corrupt 注释契约号 2.3→2.2、replay 时间戳平移到当前时间、补 tests/test_simulator.py 四场景 | 人工核对：契约 2.1 六字段、2.2 异常类型、权重与线路映射；回放首条对齐当前时间且间隔不变；pytest 39 passed、manage.py check 无 issue | 直接采用 |
 
 ## 填写说明
 
