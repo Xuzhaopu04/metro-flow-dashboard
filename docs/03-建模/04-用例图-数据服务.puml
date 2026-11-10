@@ -16,10 +16,10 @@ actor "指标库\n(MySQL)" as db
 actor "快照缓存\n(Redis)" as cache
 
 rectangle "数据服务模块（api/）" {
-  usecase "UC-10 获取实时快照" as UC10
-  usecase "UC-11 查询历史序列" as UC11
-  usecase "UC-12 查询站点排行" as UC12
-  usecase "UC-13 渲染大屏页面" as UC13
+  usecase "UC-10: 获取实时快照" as UC10
+  usecase "UC-11: 查询历史序列" as UC11
+  usecase "UC-12: 查询站点排行" as UC12
+  usecase "UC-13: 渲染大屏页面" as UC13
 }
 
 guard --> UC13

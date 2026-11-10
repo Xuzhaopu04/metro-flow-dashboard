@@ -62,6 +62,8 @@ python simulator/simulator.py --replay data/samples/sample_events.json
 | `tests/` | 单元测试与接口测试，不需要真数据库和 Redis | 各模块 |
 | `docs/` | 需求、设计、建模、测试、项目管理 | 文档 |
 
+只改自己负责的目录。文件级责任划分、四个跨目录接口点的归属、改别人目录的处理方式，见 `docs/05-管理/分工与责任矩阵.md`。
+
 ```
 .
 ├── config/           Django 配置（settings / urls / wsgi / 测试配置）
