@@ -35,8 +35,15 @@ STREAM_MAXLEN = 100000
 
 # 站点表外置到 stations.json，改站点不碰代码；A 线是主干线，权重比 B 线高
 _STATIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stations.json")
-with open(_STATIONS_FILE, encoding="utf-8") as _fp:
-    STATIONS = json.load(_fp)
+try:
+    with open(_STATIONS_FILE, encoding="utf-8") as _fp:
+        STATIONS = json.load(_fp)
+except FileNotFoundError:
+    print(f"找不到站点配置文件 {_STATIONS_FILE}，请确认文件存在")
+    sys.exit(1)
+except json.JSONDecodeError as exc:
+    print(f"站点配置文件 {_STATIONS_FILE} 格式错误：{exc}")
+    sys.exit(1)
 
 # 早高峰进站多，晚高峰出站多，平时各半
 PEAK_HOURS_IN = range(7, 10)
@@ -99,8 +106,21 @@ def replay(args, client):
     样例里的绝对时间戳不能直接用（回放出来全是历史时间），
     所以把第一条对齐到当前时间，后续按原相对间隔顺延。
     """
-    with open(args.replay, encoding="utf-8") as fp:
-        events = [json.loads(line) for line in fp if line.strip()]
+    events = []
+    try:
+        with open(args.replay, encoding="utf-8") as fp:
+            for lineno, line in enumerate(fp, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    events.append(json.loads(line))
+                except json.JSONDecodeError as exc:
+                    print(f"样例文件第 {lineno} 行 JSON 解析失败：{exc}")
+                    sys.exit(1)
+    except FileNotFoundError:
+        print(f"找不到样例文件 {args.replay}")
+        sys.exit(1)
     if not events:
         print("样例文件是空的")
         return 0
@@ -173,6 +193,9 @@ def main():
 
     if not 0 <= args.inject <= 1:
         parser.error("--inject 取值应在 0 到 1 之间")
+
+    if args.count < 0:
+        parser.error("--count 不能为负数")
 
     client = build_client(args.dry_run)
     sent = 0
