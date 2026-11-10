@@ -1,0 +1,67 @@
+@startuml 13-时序图-数据服务
+title 数据服务模块：三个接口的请求处理与降级路径
+autonumber
+
+participant "浏览器\nweb/index.html" as WEB
+participant "接口\napi/views.py" as API
+participant "Redis\nmetric:snapshot" as SNAP
+participant "MySQL\nmetric_window" as DB
+
+== UC-10 最新快照 GET /api/snapshot（每秒） ==
+WEB -> API : GET /api/snapshot
+API -> SNAP : GET metric:snapshot
+alt 快照存在
+  SNAP --> API : 快照 JSON
+  API -> API : normalize_snapshot 补齐字段
+  API --> WEB : 200 + 数据，Cache-Control: no-store
+else 键过期 / Redis 不可用 / JSON 损坏 / 非对象
+  SNAP --> API : 空 或 坏数据
+  API --> WEB : 200 + 空结构（不返回 404，也不返回 500）
+  WEB -> WEB : 显示"暂无数据"
+end
+
+== UC-11 历史序列 GET /api/series ==
+WEB -> API : GET /api/series?minutes=
+API -> API : int_param 校验 minutes 在 1—60
+alt 参数不合法
+  API --> WEB : 400 INVALID_PARAM
+else 参数合法
+  API -> DB : filter(ts>=now-minutes)\nvalues(ts).annotate(Sum)
+  alt 查询成功
+    DB --> API : 聚合行
+    API -> API : local_iso 换算到 +08:00
+    API --> WEB : 200 {station_id, points}
+  else MySQL 不可用（DatabaseError）
+    DB --> API : 异常
+    API -> API : 记 warning 日志
+    API --> WEB : 200 {station_id, points:[]}（降级）
+  end
+end
+
+== UC-12 站点排行 GET /api/rank ==
+WEB -> API : GET /api/rank?top=
+API -> API : int_param 校验 top 在 1—20
+alt 参数不合法
+  API --> WEB : 400 INVALID_PARAM
+else 参数合法
+  API -> DB : 固定最近 5 分钟\n按站 Sum 后降序取前 N
+  alt 查询成功
+    DB --> API : 排行行
+    API --> WEB : 200 {top:[{station_id, passengers}]}
+  else MySQL 不可用（DatabaseError）
+    DB --> API : 异常
+    API -> API : 记 warning 日志
+    API --> WEB : 200 {top:[]}（降级）
+  end
+end
+
+== UC-13 未匹配路径 ==
+WEB -> API : GET /api/任意不存在路径
+API --> WEB : 404 NOT_FOUND
+note right of API
+  兜底路由保证 DEBUG=1 时
+  也返回 JSON 而不是 HTML 报错页
+  DEBUG=0 时由 handler404 接管
+end note
+
+@enduml
