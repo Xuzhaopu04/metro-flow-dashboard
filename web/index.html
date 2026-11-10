@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>实时客流监测大屏</title>
-  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <!-- 用 npmmirror 而不是 jsdelivr：jsdelivr 在国内经常只有几 KB/s，Vue/ECharts 加载不出来页面就只剩文字 -->
+  <script src="https://registry.npmmirror.com/vue/3.5.13/files/dist/vue.global.prod.js"></script>
+  <script src="https://registry.npmmirror.com/echarts/5.5.1/files/dist/echarts.min.js"></script>
   <style>
     :root { --bg: #0f172a; --panel: #182335; --line: #243349; --text: #e2e8f0; --muted: #7c8ba1; --accent: #38bdf8; --alert: #ef4444; }
     * { box-sizing: border-box; }

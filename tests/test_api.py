@@ -7,6 +7,8 @@ import json
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
+from django.db import DatabaseError
 from django.utils import timezone
 
 from api import views
@@ -57,7 +59,67 @@ def test_snapshot_returns_redis_payload(client, fake_redis):
                "stations": [{"station_id": "A01", "line_id": "L1", "passengers": 12}],
                "late_count": 1, "invalid_count": 0}
     fake_redis(json.dumps(payload))
-    assert client.get("/api/snapshot").json() == payload
+    body = client.get("/api/snapshot").json()
+    # Redis 里存的是 5 个字段，接口层要原样带出来，不多不少
+    for key, value in payload.items():
+        assert body[key] == value
+
+
+def test_snapshot_adds_alert_fields(client, fake_redis):
+    """快照响应必须带 alerting 与 threshold，契约 4.1。"""
+    fake_redis(json.dumps({"ts": None, "total": 1, "stations": [],
+                           "late_count": 0, "invalid_count": 0}))
+    body = client.get("/api/snapshot").json()
+    assert set(body) == {"ts", "total", "stations", "late_count",
+                         "invalid_count", "alerting", "threshold"}
+    assert body["alerting"] is False
+    assert body["threshold"] == settings.ALERT_THRESHOLD
+
+
+def test_snapshot_alerts_when_total_reaches_threshold(client, fake_redis, monkeypatch):
+    """恰好等于阈值也要告警（>= 而非 >）。"""
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 100)
+    fake_redis(json.dumps({"ts": None, "total": 100, "stations": [],
+                           "late_count": 0, "invalid_count": 0}))
+    assert client.get("/api/snapshot").json()["alerting"] is True
+
+
+def test_snapshot_does_not_alert_below_threshold(client, fake_redis, monkeypatch):
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 100)
+    fake_redis(json.dumps({"ts": None, "total": 99, "stations": [],
+                           "late_count": 0, "invalid_count": 0}))
+    assert client.get("/api/snapshot").json()["alerting"] is False
+
+
+def test_alert_follows_live_config_not_snapshot(client, fake_redis, monkeypatch):
+    """阈值改了要立刻生效，不能沿用写快照时的旧判断。
+
+    消费者根本不知道阈值，所以 alerting 只能由接口层现算。
+    """
+    payload = {"ts": None, "total": 50, "stations": [],
+               "late_count": 0, "invalid_count": 0}
+    fake_redis(json.dumps(payload))
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 100)
+    assert client.get("/api/snapshot").json()["alerting"] is False
+    monkeypatch.setattr(settings, "ALERT_THRESHOLD", 10)
+    body = client.get("/api/snapshot").json()
+    assert body["alerting"] is True
+    assert body["threshold"] == 10
+
+
+def test_empty_snapshot_has_alert_fields(client):
+    """Redis 里没数据时同样要给告警字段，前端不该在这里分支。"""
+    body = client.get("/api/snapshot").json()
+    assert body["alerting"] is False
+    assert body["threshold"] == settings.ALERT_THRESHOLD
+
+
+def test_normalize_snapshot_ignores_upstream_alert_fields():
+    """上游若擅自写了 alerting，以服务端现算的为准。"""
+    dirty = {"total": 5, "alerting": True, "threshold": 1}
+    result = views.normalize_snapshot(dirty)
+    assert result["alerting"] is False
+    assert result["threshold"] == settings.ALERT_THRESHOLD
 
 
 def test_snapshot_falls_back_on_broken_json(client, fake_redis):
@@ -131,3 +193,65 @@ def test_dashboard_renders(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "实时客流" in response.content.decode()
+
+
+# ---- 数据库故障降级 ----
+# 架构说明第 3 节：MySQL 挂了只该让历史与排行查不到，实时快照仍可用。
+# 不降级的话页面会拿到 500 甚至 HTML 报错页，把"库在维护"变成"系统坏了"。
+
+def break_db(monkeypatch):
+    """让任意 ORM 查询在求值时抛 DatabaseError，模拟 MySQL 不可用。"""
+    def boom(*args, **kwargs):
+        raise DatabaseError("simulated: MySQL is down")
+
+    monkeypatch.setattr(views.MetricWindow.objects, "filter", boom)
+
+
+@pytest.mark.django_db
+def test_series_degrades_to_empty_points_when_db_down(client, monkeypatch):
+    break_db(monkeypatch)
+    response = client.get("/api/series?minutes=5")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["points"] == []
+    # 契约 4.2 只认 station_id 与 points，不能自创字段
+    assert set(body) == {"station_id", "points"}
+
+
+@pytest.mark.django_db
+def test_rank_degrades_to_empty_top_when_db_down(client, monkeypatch):
+    break_db(monkeypatch)
+    response = client.get("/api/rank?top=5")
+    assert response.status_code == 200
+    assert response.json() == {"top": []}
+
+
+@pytest.mark.django_db
+def test_snapshot_still_works_when_db_down(client, monkeypatch, fake_redis):
+    """降级只影响查库的两个接口，快照走 Redis，不该被牵连。"""
+    break_db(monkeypatch)
+    fake_redis(json.dumps({"ts": "2026-10-20T09:30:15+08:00", "total": 3,
+                           "stations": [], "late_count": 0, "invalid_count": 0}))
+    response = client.get("/api/snapshot")
+    assert response.status_code == 200
+    assert response.json()["total"] == 3
+
+
+@pytest.mark.django_db
+def test_db_degradation_is_logged(client, monkeypatch, caplog):
+    """降级必须留日志，否则排障时看不出数据是"本来没有"还是"取不到"。"""
+    break_db(monkeypatch)
+    with caplog.at_level("WARNING", logger="api.views"):
+        client.get("/api/series")
+    assert any("降级" in record.message for record in caplog.records)
+
+
+@pytest.mark.django_db
+def test_db_errors_are_not_swallowed_silently(client, monkeypatch):
+    """只降级 DatabaseError；编程错误要继续暴露，不能被 except 吞掉。"""
+    def boom(*args, **kwargs):
+        raise AttributeError("simulated: 字段名写错")
+
+    monkeypatch.setattr(views.MetricWindow.objects, "filter", boom)
+    with pytest.raises(AttributeError):
+        client.get("/api/series")
