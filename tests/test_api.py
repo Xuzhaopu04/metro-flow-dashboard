@@ -7,6 +7,7 @@ import json
 from datetime import timedelta
 
 import pytest
+from django.db import DatabaseError
 from django.utils import timezone
 
 from api import views
@@ -131,3 +132,65 @@ def test_dashboard_renders(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "实时客流" in response.content.decode()
+
+
+# ---- 数据库故障降级 ----
+# 架构说明第 3 节：MySQL 挂了只该让历史与排行查不到，实时快照仍可用。
+# 不降级的话页面会拿到 500 甚至 HTML 报错页，把"库在维护"变成"系统坏了"。
+
+def break_db(monkeypatch):
+    """让任意 ORM 查询在求值时抛 DatabaseError，模拟 MySQL 不可用。"""
+    def boom(*args, **kwargs):
+        raise DatabaseError("simulated: MySQL is down")
+
+    monkeypatch.setattr(views.MetricWindow.objects, "filter", boom)
+
+
+@pytest.mark.django_db
+def test_series_degrades_to_empty_points_when_db_down(client, monkeypatch):
+    break_db(monkeypatch)
+    response = client.get("/api/series?minutes=5")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["points"] == []
+    # 契约 4.2 只认 station_id 与 points，不能自创字段
+    assert set(body) == {"station_id", "points"}
+
+
+@pytest.mark.django_db
+def test_rank_degrades_to_empty_top_when_db_down(client, monkeypatch):
+    break_db(monkeypatch)
+    response = client.get("/api/rank?top=5")
+    assert response.status_code == 200
+    assert response.json() == {"top": []}
+
+
+@pytest.mark.django_db
+def test_snapshot_still_works_when_db_down(client, monkeypatch, fake_redis):
+    """降级只影响查库的两个接口，快照走 Redis，不该被牵连。"""
+    break_db(monkeypatch)
+    fake_redis(json.dumps({"ts": "2026-10-20T09:30:15+08:00", "total": 3,
+                           "stations": [], "late_count": 0, "invalid_count": 0}))
+    response = client.get("/api/snapshot")
+    assert response.status_code == 200
+    assert response.json()["total"] == 3
+
+
+@pytest.mark.django_db
+def test_db_degradation_is_logged(client, monkeypatch, caplog):
+    """降级必须留日志，否则排障时看不出数据是"本来没有"还是"取不到"。"""
+    break_db(monkeypatch)
+    with caplog.at_level("WARNING", logger="api.views"):
+        client.get("/api/series")
+    assert any("降级" in record.message for record in caplog.records)
+
+
+@pytest.mark.django_db
+def test_db_errors_are_not_swallowed_silently(client, monkeypatch):
+    """只降级 DatabaseError；编程错误要继续暴露，不能被 except 吞掉。"""
+    def boom(*args, **kwargs):
+        raise AttributeError("simulated: 字段名写错")
+
+    monkeypatch.setattr(views.MetricWindow.objects, "filter", boom)
+    with pytest.raises(AttributeError):
+        client.get("/api/series")
