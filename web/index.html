@@ -19,7 +19,9 @@
            background-color: var(--bg);
            background-image: radial-gradient(1100px 520px at 50% -8%, #16253c 0%, rgba(11,18,32,0) 62%);
            background-attachment: fixed; }
-    #app { max-width: 1400px; margin: 0 auto; padding: 22px 26px 30px; }
+    /* 值班室是 1920 起的屏，不再限死 1400，改用左右留白随视口伸缩 */
+    #app { width: 100%; max-width: 1920px; margin: 0 auto;
+           padding: clamp(14px, 1.4vw, 26px) clamp(16px, 1.6vw, 30px) 22px; }
 
     header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
     .brand { display: flex; align-items: center; gap: 12px; }
@@ -36,14 +38,15 @@
     .dot.bad { background: var(--alert); animation: blink 1s steps(2, start) infinite; }
     @keyframes blink { 50% { opacity: .25; } }
 
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; margin-top: 18px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 18px; }
     .kpi { position: relative; background: var(--panel); border: 1px solid var(--line);
            border-radius: 10px; padding: 12px 16px 14px; overflow: hidden; }
     /* 左侧色条用来区分指标类别，比整块染色克制 */
     .kpi::before { content: ""; position: absolute; left: 0; top: 13px; bottom: 13px; width: 3px;
                    border-radius: 2px; background: var(--accent); opacity: .8; }
     .kpi .k { font-size: 12px; color: var(--muted); }
-    .kpi .v { font-size: 26px; font-weight: 600; margin-top: 5px; color: #f8fafc;
+    /* 字号跟着屏宽走：笔记本上不至于挤，1920 大屏上数字也够醒目 */
+    .kpi .v { font-size: clamp(26px, 1.8vw, 36px); font-weight: 600; margin-top: 5px; color: #f8fafc;
               font-variant-numeric: tabular-nums; line-height: 1.15; }
     .kpi .v small { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 4px; }
     .kpi.accent .v { color: var(--accent); }
@@ -57,19 +60,38 @@
     .kpi.alerting { border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.07); }
     .kpi.alerting .v { color: #fca5a5; }
     .kpi.alerting::before { background: var(--alert); }
+    /* 阈值是配置项，不该和业务指标同权重，字号和色条都压一档 */
+    .kpi.dim .v { font-size: clamp(20px, 1.3vw, 24px); color: #94a3b8; }
+    .kpi.dim::before { background: #475569; opacity: 1; }
+    .kpi.health .v { font-size: clamp(20px, 1.3vw, 24px); }
+    .kpi.health .v .late { color: var(--warn); }
+    .kpi.health .v .invalid { color: #f87171; }
+    .kpi.health .v .sep { color: #3b4a60; margin: 0 7px; }
+    .spark { display: block; margin-top: 6px; overflow: visible; }
 
-    .alert { display: flex; align-items: center; margin-top: 14px; padding: 10px 16px; border-radius: 8px;
-             font-size: 13px; color: #fca5a5; background: rgba(239,68,68,.13);
-             border: 1px solid rgba(239,68,68,.55); animation: breathe 2.4s ease-in-out infinite; }
+    .alert { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px;
+             padding: 10px 16px; border-radius: 8px; font-size: 13px; color: #fca5a5;
+             background: rgba(239,68,68,.13); border: 1px solid rgba(239,68,68,.55);
+             animation: breathe 2.4s ease-in-out infinite; }
+    .alert b { color: #fff; font-variant-numeric: tabular-nums; }
+    .alert .sep { color: rgba(252,165,165,.35); margin: 0 4px; }
     .alert .dot { margin-right: 10px; }
     @keyframes breathe {
       0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.32); }
       50% { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
     }
 
-    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; margin-top: 16px; }
+    .grid { display: grid; grid-template-columns: 330px minmax(0, 1fr) 340px;
+            gap: 16px; margin-top: 16px; }
+    @media (max-width: 1500px) {
+      .grid { grid-template-columns: minmax(0, 1fr) 330px; }
+      /* 线网图在中等宽度独占一行，柱子仍然留够宽度 */
+      .flow-card { grid-column: 1 / -1; }
+      .flow-card .flow-wrap { height: 200px; }
+    }
     @media (max-width: 1080px) {
       .grid { grid-template-columns: minmax(0, 1fr); }
+      .flow-card { grid-column: auto; }
       .chart { height: 260px !important; }
       .clock { display: none; }
     }
@@ -82,10 +104,10 @@
     .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .card h2 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0; letter-spacing: .5px; }
     .hint { font-size: 11px; color: #5d6b80; }
-    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 7px; }
+    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 7px; flex-wrap: wrap; }
     .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 
-    .toolbar { display: flex; gap: 6px; }
+    .toolbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
     .tab { padding: 4px 12px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
            font-size: 12px; color: var(--muted); background: transparent; transition: all .15s; }
     .tab:hover { color: #cbd5e1; border-color: #33455f; }
@@ -98,10 +120,20 @@
     .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
              font-size: 13px; color: var(--muted); pointer-events: none; }
 
+    /* 线网图直接用 SVG：站点只有个位数，够用且不用再引一个图表实例 */
+    .flow-card { display: flex; flex-direction: column; }
+    .flow-wrap { position: relative; flex: 1; min-height: 0; margin-top: 6px; }
+    .flow-wrap svg { width: 100%; height: 100%; display: block; }
+    .flow-note { font-size: 11px; color: #5d6b80; text-align: center; }
+
     ol.rank { list-style: none; margin: 8px 0 0; padding: 0; }
     ol.rank li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px;
-                 align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+                 align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line);
+                 font-size: 13px; cursor: pointer; transition: background .15s; }
     ol.rank li:last-child { border-bottom: none; }
+    ol.rank li:hover { background: rgba(56,189,248,.05); }
+    /* 选中项用左侧亮条标记，和柱状图的高亮是同一件事的两种表达 */
+    ol.rank li.sel { background: rgba(56,189,248,.09); box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; }
     .badge { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
              font-size: 11px; color: var(--muted); background: rgba(255,255,255,.05); }
     .badge.top1 { color: var(--accent); background: rgba(56,189,248,.15); }
@@ -148,25 +180,59 @@
       <div class="k">活跃站点</div>
       <div class="v">{{ stationCount }}<small>个</small></div>
     </div>
-    <div class="kpi violet">
+    <div class="kpi dim">
       <div class="k">告警阈值</div>
       <div class="v">{{ threshold }}<small>人次/秒</small></div>
     </div>
-    <div class="kpi warn">
-      <div class="k">迟到事件</div>
-      <div class="v">{{ lateCount }}<small>条</small></div>
-    </div>
-    <div class="kpi red">
-      <div class="k">非法事件</div>
-      <div class="v">{{ invalidCount }}<small>条</small></div>
+    <div class="kpi health">
+      <div class="k">数据健康</div>
+      <div class="v"><span class="late">{{ lateCount }}</span><small>迟到</small><span class="sep">·</span><span class="invalid">{{ invalidCount }}</span><small>非法</small></div>
+      <svg class="spark" width="100%" height="30" viewBox="0 0 120 30" preserveAspectRatio="none" v-if="health.length > 1">
+        <polyline :points="spark.late" fill="none" stroke="#f59e0b" stroke-width="1.6"
+                  vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+        <polyline :points="spark.invalid" fill="none" stroke="#ef4444" stroke-width="1.4"
+                  stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="foot hint">近 {{ health.length }} 秒 · 橙迟到 红非法</div>
     </div>
   </div>
 
   <div class="alert" v-if="alerting">
-    <span class="dot bad"></span>客流告警：当前 {{ total }} 人次/秒，已超过阈值 {{ threshold }}
+    <span class="dot bad"></span>
+    <span>客流告警：当前 <b>{{ total }}</b> 人次/秒，已超过阈值 <b>{{ threshold }}</b></span>
+    <span class="sep">|</span>
+    <span>已持续 <b>{{ alertSeconds }}</b> 秒</span>
+    <span class="sep">|</span>
+    <span>峰值 <b>{{ alertPeak }}</b></span>
   </div>
 
   <div class="grid">
+    <section class="card flow-card">
+      <div class="card-head">
+        <h2>线网客流分布</h2>
+        <span class="hint">圆面积对应客流</span>
+      </div>
+      <div class="flow-wrap">
+        <svg viewBox="0 0 360 300" preserveAspectRatio="xMidYMid meet" v-if="flowLines.length">
+          <g v-for="ln in flowLines" :key="ln.key">
+            <line :x1="26" :y1="ln.y" :x2="334" :y2="ln.y"
+                  :stroke="ln.color" stroke-width="3" stroke-linecap="round" opacity=".28"/>
+            <text x="8" :y="ln.y + 4" :fill="ln.color" font-size="11">{{ ln.short }}</text>
+          </g>
+          <g v-for="n in flowNodes" :key="n.id">
+            <circle :cx="n.x" :cy="n.y" :r="n.r"
+                    :fill="n.color" fill-opacity=".18" :stroke="n.color" stroke-width="2"/>
+            <text :x="n.x" :y="n.y + 4" fill="#e2e8f0" font-size="11"
+                  text-anchor="middle">{{ n.passengers }}</text>
+            <text :x="n.x" :y="n.y + n.r + 14" fill="#7c8ba1" font-size="10"
+                  text-anchor="middle">{{ n.id }}</text>
+          </g>
+        </svg>
+        <div class="empty" v-if="!flowNodes.length">{{ online ? '等待数据…' : '连接中断' }}</div>
+      </div>
+      <div class="flow-note" v-if="flowNodes.length">线宽=线路 · 圆大小=当前秒客流</div>
+    </section>
+
     <section class="card">
       <div class="card-head">
         <div>
@@ -174,6 +240,7 @@
           <div class="legend" v-if="line === 'all'">
             <span><i style="background:#38bdf8"></i>1 号线</span>
             <span><i style="background:#a78bfa"></i>2 号线</span>
+            <span style="color:#4d5a70">标签上方为较上一秒增减</span>
           </div>
         </div>
         <div class="toolbar">
@@ -191,10 +258,12 @@
     <aside class="card rank-card">
       <div class="card-head">
         <h2>近 5 分钟客流排行</h2>
-        <span class="hint">TOP 5</span>
+        <span class="hint">TOP 5 · 点击看单站</span>
       </div>
       <ol class="rank">
-        <li v-for="(item, index) in rank" :key="item.station_id">
+        <li v-for="(item, index) in rank" :key="item.station_id"
+            :class="{ sel: selected === item.station_id }"
+            @click="pickStation(item.station_id)">
           <span class="badge" :class="'top' + (index + 1)">{{ index + 1 }}</span>
           <div class="rank-main">
             <span class="rank-name">{{ item.station_id }}</span>
@@ -204,14 +273,24 @@
         </li>
         <li class="rank-empty" v-if="!rank.length">暂无数据</li>
       </ol>
-      <div class="rank-foot">按最近 5 分钟累计客流排序<br>排行与趋势每 5 秒刷新</div>
+      <div class="rank-foot">
+        按最近 5 分钟累计客流排序<br>排行与趋势每 5 秒刷新<br>
+        <span v-if="selected">已选 {{ selected }}，趋势图同步切换</span>
+        <span v-else>点击某站可下钻到单站趋势</span>
+      </div>
     </aside>
   </div>
 
   <section class="card" style="margin-top: 16px">
     <div class="card-head">
-      <h2>近 5 分钟客流趋势</h2>
-      <span class="hint">虚线为当前告警阈值</span>
+      <h2>近 5 分钟客流趋势
+        <span class="hint" style="margin-left: 12px">虚线为告警阈值 · 当前 {{ selected || '全部站点' }}</span>
+      </h2>
+      <div class="toolbar">
+        <button v-for="opt in stationOptions" :key="opt.value"
+                class="tab" :class="{ on: selected === opt.value }"
+                @click="selected = opt.value">{{ opt.label }}</button>
+      </div>
     </div>
     <div class="chart-wrap">
       <div class="chart slim" ref="lineEl"></div>
@@ -228,10 +307,11 @@
 {% endverbatim %}
 
 <script>
-const { createApp, ref, computed, watch, onMounted, onUnmounted } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vue;
 
 const SNAPSHOT_MS = 1000;       // 快照刷新间隔
 const HISTORY_MS = 5000;        // 历史与排行刷新间隔，没必要每秒查库
+const HEALTH_LEN = 60;          // 数据健康走势保留最近 60 秒
 const LINE_COLORS = { L1: "#38bdf8", L2: "#a78bfa" };  // 与图例、柱色同一份来源，改色只改这里
 const PANEL_TOOLTIP = {
   backgroundColor: "#0f1a2c", borderColor: "#243349", borderWidth: 1,
@@ -244,6 +324,12 @@ const AXIS = {
 };
 const SPLIT_LINE = { lineStyle: { color: "#1c2942", type: "dashed" } };
 
+function lineName(id) {
+  if (id === "L1") return "1 号线";
+  if (id === "L2") return "2 号线";
+  return id || "未分线";
+}
+
 createApp({
   setup() {
     const total = ref(0);
@@ -255,12 +341,19 @@ createApp({
     const trends = ref([]);
     const online = ref(true);
     const line = ref("all");
+    const selected = ref("");        // 空串代表全部站点，下钻时存 station_id
     const barEl = ref(null);
     const lineEl = ref(null);
     // 契约 4.1 写明前端不要写死阈值：这里只是首帧占位，真实值由 /api/snapshot 下发
     const threshold = ref(100);
     const alerting = ref(false);
     const now = ref(Date.now());
+
+    // 环比要用上一秒的数字，迟到/非法要看走势，这两样接口都不给，只能前端自己攒
+    const deltas = reactive({});
+    const health = ref([]);
+    const alertStart = ref(0);
+    const alertPeak = ref(0);
 
     const lineOptions = [
       { value: "all", label: "全部线路" },
@@ -272,6 +365,7 @@ createApp({
     let trendChart = null;
     let timers = [];
     let observer = null;
+    let prevPassengers = new Map();
 
     const clock = computed(() => new Date(now.value).toTimeString().slice(0, 8));
     const stationCount = computed(() => stations.value.length);
@@ -280,6 +374,13 @@ createApp({
     );
     const snapshotLabel = computed(() => (snapshotTs.value ? snapshotTs.value.slice(11, 19) : "—"));
     const rankMax = computed(() => Math.max(1, ...rank.value.map(item => item.passengers)));
+    const stationOptions = computed(() => [
+      { value: "", label: "全部" },
+      ...stations.value.map(s => ({ value: s.station_id, label: s.station_id }))
+    ]);
+    const alertSeconds = computed(() =>
+      alertStart.value ? Math.max(0, Math.round((now.value - alertStart.value) / 1000)) : 0
+    );
 
     // 快照是 1 秒窗口，停更超过 10 秒基本就是采集或消费断了，用颜色把这件事说出来
     const age = computed(() => {
@@ -300,15 +401,92 @@ createApp({
       return age.value > 10 ? "warn" : "";
     });
 
+    // 线网图：站点表里只有线路和客流，没有坐标，按线路分行、站序等距排开就够了
+    const flowMax = computed(() => Math.max(1, ...stations.value.map(s => s.passengers)));
+    const flowLines = computed(() => {
+      const groups = new Map();
+      for (const s of stations.value) {
+        const key = s.line_id || "";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(s);
+      }
+      const keys = [...groups.keys()].sort();
+      const gap = keys.length > 1 ? 120 : 0;
+      return keys.map((key, i) => ({
+        key,
+        short: key || "—",
+        color: LINE_COLORS[key] || "#38bdf8",
+        y: keys.length > 1 ? 110 + i * gap : 150
+      }));
+    });
+    const flowNodes = computed(() => {
+      const groups = new Map();
+      for (const s of stations.value) {
+        const key = s.line_id || "";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(s);
+      }
+      const keys = [...groups.keys()].sort();
+      const gap = keys.length > 1 ? 120 : 0;
+      const nodes = [];
+      keys.forEach((key, li) => {
+        const rows = groups.get(key);
+        const step = rows.length > 1 ? 250 / (rows.length - 1) : 0;
+        rows.forEach((s, si) => {
+          nodes.push({
+            id: s.station_id,
+            passengers: s.passengers,
+            color: LINE_COLORS[key] || "#38bdf8",
+            x: rows.length > 1 ? 55 + si * step : 180,
+            y: keys.length > 1 ? 110 + li * gap : 150,
+            // 半径按开方缩放：面积和客流成正比，小站才不会被大站压没
+            r: 10 + 18 * Math.sqrt(s.passengers / flowMax.value)
+          });
+        });
+      });
+      return nodes;
+    });
+
+    // 迷你走势不用再开两个 ECharts 实例，拼 polyline 就够了
+    const spark = computed(() => {
+      const rows = health.value;
+      const max = Math.max(1, ...rows.map(h => Math.max(h.late, h.invalid)));
+      const step = 120 / Math.max(1, HEALTH_LEN - 1);
+      const build = key => rows
+        .map((row, i) => (i * step).toFixed(1) + "," + (28 - (row[key] / max) * 24).toFixed(1))
+        .join(" ");
+      return { late: build("late"), invalid: build("invalid") };
+    });
+
     function barWidth(passengers) {
       // 留 4% 下限，否则小客流的名次条几乎看不见
       return Math.max(4, Math.round((passengers / rankMax.value) * 100)) + "%";
+    }
+
+    function pickStation(id) {
+      // 再点一次同一个站回到全部，省得另外放一个"取消"按钮
+      selected.value = selected.value === id ? "" : id;
     }
 
     async function getJSON(url) {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(url + " -> " + res.status);
       return res.json();
+    }
+
+    function trackHealth(late, invalid) {
+      health.value.push({ late, invalid });
+      if (health.value.length > HEALTH_LEN) health.value.shift();
+    }
+
+    function trackAlert(active) {
+      if (active) {
+        if (!alertStart.value) alertStart.value = now.value;
+        alertPeak.value = Math.max(alertPeak.value, total.value);
+      } else {
+        alertStart.value = 0;
+        alertPeak.value = 0;
+      }
     }
 
     async function loadSnapshot() {
@@ -322,6 +500,18 @@ createApp({
         stations.value = Array.isArray(data.stations) ? data.stations : [];
         if (Number.isFinite(data.threshold)) threshold.value = data.threshold;
         alerting.value = data.alerting === true;
+
+        // 增量基于上一秒同一站的客流，首帧没有对比对象就不显示
+        const next = new Map();
+        for (const s of stations.value) {
+          next.set(s.station_id, s.passengers);
+          deltas[s.station_id] = prevPassengers.has(s.station_id)
+            ? s.passengers - prevPassengers.get(s.station_id)
+            : 0;
+        }
+        prevPassengers = next;
+        trackHealth(lateCount.value, invalidCount.value);
+        trackAlert(alerting.value);
         drawBars();
       } catch (e) {
         online.value = false;
@@ -330,8 +520,11 @@ createApp({
 
     async function loadHistory() {
       try {
+        const seriesUrl = selected.value
+          ? "/api/series?station_id=" + encodeURIComponent(selected.value) + "&minutes=5"
+          : "/api/series?minutes=5";
         const [series, top] = await Promise.all([
-          getJSON("/api/series?minutes=5"),
+          getJSON(seriesUrl),
           getJSON("/api/rank?top=5")
         ]);
         trends.value = series.points || [];
@@ -342,32 +535,73 @@ createApp({
       }
     }
 
+    // 增减标签用散点单独画：柱子的 label 只有一个颜色，涨和跌区分不开
+    function deltaSeries(up, down) {
+      const make = (data, color, fmt) => ({
+        type: "scatter", silent: true, symbolSize: 0, tooltip: { show: false }, data,
+        label: { show: true, position: "top", offset: [0, -20], fontSize: 10, color, formatter: fmt }
+      });
+      return [make(up, "#f87171", p => "+" + p.value[2]),
+              make(down, "#4ade80", p => String(p.value[2]))];
+    }
+
+    function barsTooltip(rows) {
+      return {
+        trigger: "axis",
+        axisPointer: { type: "shadow", shadowStyle: { color: "rgba(56,189,248,.06)" } },
+        ...PANEL_TOOLTIP,
+        formatter: items => {
+          const row = rows[items[0].dataIndex];
+          const dv = deltas[row.station_id] || 0;
+          const dvText = dv === 0 ? "持平" : (dv > 0 ? "+" : "") + dv;
+          return row.station_id + " · " + lineName(row.line_id) +
+                 "<br/>客流 <b style='color:#38bdf8'>" + row.passengers + "</b> 人次/秒" +
+                 "<br/>较上一秒 <b>" + dvText + "</b>";
+        }
+      };
+    }
+
+    function trendTooltip(points) {
+      return {
+        trigger: "axis",
+        axisPointer: { type: "line", lineStyle: { color: "rgba(56,189,248,.45)", type: "dashed" } },
+        ...PANEL_TOOLTIP,
+        formatter: items => {
+          const p = points[items[0].dataIndex];
+          const who = selected.value || "全部站点";
+          return p.ts.slice(11, 19) + " · " + who +
+                 "<br/>客流 <b style='color:#38bdf8'>" + p.passengers + "</b> 人次/秒";
+        }
+      };
+    }
+
     function drawBars() {
       if (!barChart) return;
       const rows = visibleStations.value;
+      const up = [];
+      const down = [];
       // 全部线路时按线路着色，单线路时统一用主色，避免柱子和图例对不上
-      const data = rows.map(s => ({
-        value: s.passengers,
-        itemStyle: {
-          color: line.value === "all" ? (LINE_COLORS[s.line_id] || "#38bdf8") : "#38bdf8",
-          borderRadius: [4, 4, 0, 0]
-        }
-      }));
+      const data = rows.map((s, i) => {
+        const dv = deltas[s.station_id] || 0;
+        if (dv > 0) up.push([i, s.passengers, dv]);
+        if (dv < 0) down.push([i, s.passengers, dv]);
+        const picked = selected.value && selected.value === s.station_id;
+        return {
+          value: s.passengers,
+          itemStyle: {
+            color: line.value === "all" ? (LINE_COLORS[s.line_id] || "#38bdf8") : "#38bdf8",
+            borderRadius: [4, 4, 0, 0],
+            // 选中的站在柱子上加亮边，和右侧排行的选中态对应
+            borderColor: picked ? "#e2e8f0" : "transparent",
+            borderWidth: picked ? 2 : 0
+          }
+        };
+      });
       barChart.setOption({
         animationDuration: 400,
         animationDurationUpdate: 300,
-        tooltip: {
-          trigger: "axis",
-          axisPointer: { type: "shadow", shadowStyle: { color: "rgba(56,189,248,.06)" } },
-          ...PANEL_TOOLTIP,
-          formatter: items => {
-            const row = rows[items[0].dataIndex];
-            const lineName = row.line_id === "L1" ? "1 号线" : row.line_id === "L2" ? "2 号线" : "";
-            return row.station_id + (lineName ? " · " + lineName : "") +
-                   "<br/>客流 <b style='color:#38bdf8'>" + row.passengers + "</b> 人次/秒";
-          }
-        },
-        grid: { left: 48, right: 22, top: 28, bottom: 30 },
+        tooltip: barsTooltip(rows),
+        grid: { left: 48, right: 22, top: 44, bottom: 30 },
         xAxis: { type: "category", data: rows.map(s => s.station_id), ...AXIS },
         yAxis: {
           type: "value", name: "人次/秒", minInterval: 1,
@@ -379,14 +613,12 @@ createApp({
           barMaxWidth: 46,
           data: data,
           label: { show: true, position: "top", color: "#94a3b8", fontSize: 11 }
-        }]
+        }, ...deltaSeries(up, down)]
       });
     }
 
-    function drawTrend() {
-      if (!trendChart) return;
-      const points = trends.value;
-      const lineSeries = {
+    function trendSeries(points) {
+      const series = {
         type: "line",
         smooth: true,
         showSymbol: false,
@@ -401,24 +633,22 @@ createApp({
       };
       // 阈值线只在有阈值时画，否则会在 0 处多出一条误导性的虚线
       if (threshold.value > 0) {
-        lineSeries.markLine = {
+        series.markLine = {
           silent: true, symbol: "none",
           label: { formatter: "阈值 " + threshold.value, color: "#f87171", fontSize: 11, position: "insideEndTop" },
           lineStyle: { color: "rgba(239,68,68,.55)", type: "dashed" },
           data: [{ yAxis: threshold.value }]
         };
       }
+      return series;
+    }
+
+    function drawTrend() {
+      if (!trendChart) return;
+      const points = trends.value;
       trendChart.setOption({
         animationDuration: 400,
-        tooltip: {
-          trigger: "axis",
-          axisPointer: { type: "line", lineStyle: { color: "rgba(56,189,248,.45)", type: "dashed" } },
-          ...PANEL_TOOLTIP,
-          formatter: items => {
-            const p = points[items[0].dataIndex];
-            return p.ts.slice(11, 19) + "<br/>客流 <b style='color:#38bdf8'>" + p.passengers + "</b> 人次/秒";
-          }
-        },
+        tooltip: trendTooltip(points),
         grid: { left: 48, right: 44, top: 30, bottom: 26 },
         xAxis: {
           // 左右各留 1%：最后一个时间标签居中在端点，不留白会被容器边缘裁掉半个
@@ -431,13 +661,18 @@ createApp({
           nameTextStyle: { color: "#7c8ba1", fontSize: 11 },
           splitLine: SPLIT_LINE, ...AXIS
         },
-        series: [lineSeries]
+        series: [trendSeries(points)]
       });
     }
 
     watch(line, drawBars);
     // 阈值可能随环境变量热改，拿到新值就重画，否则参考线要等下一轮历史刷新
     watch(threshold, drawTrend);
+    // 下钻要同时换趋势数据和柱子的高亮，历史接口本身支持 station_id
+    watch(selected, () => {
+      drawBars();
+      loadHistory();
+    });
 
     onMounted(() => {
       barChart = echarts.init(barEl.value);
@@ -465,7 +700,9 @@ createApp({
 
     return { total, snapshotTs, lateCount, invalidCount, rank, trends, online, line, lineOptions,
              threshold, alerting, clock, stationCount, visibleStations, snapshotLabel,
-             freshText, freshLevel, barWidth, barEl, lineEl };
+             freshText, freshLevel, barWidth, barEl, lineEl,
+             selected, stationOptions, pickStation, flowLines, flowNodes, spark, health,
+             alertSeconds, alertPeak };
   }
 }).mount("#app");
 </script>
