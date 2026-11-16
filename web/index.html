@@ -151,6 +151,73 @@
              font-size: 12px; color: var(--muted); flex-wrap: wrap; }
     .fresh.warn { color: var(--warn); }
     .fresh.bad { color: var(--alert); }
+
+    /* ---- 帮助抽屉：页面广度放在这里，首屏只多一个按钮 ---- */
+    .btn { cursor: pointer; font-family: inherit; transition: color .15s, border-color .15s; }
+    .btn:hover { color: #cbd5e1; border-color: #33455f; }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .drawer-mask { position: fixed; inset: 0; z-index: 40; background: rgba(4,8,16,.62); }
+    .drawer { position: fixed; top: 0; right: 0; z-index: 41; height: 100vh;
+              width: min(520px, 94vw); display: flex; flex-direction: column;
+              background: #0f1828; border-left: 1px solid var(--line);
+              box-shadow: -30px 0 70px rgba(0,0,0,.55); }
+    .drawer-head { padding: 16px 20px 0; }
+    .drawer-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+    .drawer-close { position: absolute; top: 14px; right: 16px; width: 28px; height: 28px;
+                    display: grid; place-items: center; border-radius: 6px; border: 1px solid var(--line);
+                    background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; }
+    .drawer-close:hover { color: var(--text); border-color: #33455f; }
+    .drawer-tabs { display: flex; gap: 6px; padding: 12px 20px 0; flex-wrap: wrap;
+                   border-bottom: 1px solid var(--line); }
+    .drawer-tabs .tab { border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+                        border-bottom-color: transparent; padding: 6px 11px; }
+    .drawer-tabs .tab.on { border-bottom-color: #0f1828; background: rgba(56,189,248,.1); }
+    .drawer-body { flex: 1; overflow: auto; padding: 14px 20px 24px; }
+    .drawer-body section + section { margin-top: 18px; }
+    .drawer-body h4 { margin: 18px 0 8px; font-size: 12px; font-weight: 500; color: #7c8ba1; }
+    .lead { font-size: 12.5px; color: #b6c3d4; line-height: 1.7; margin: 0 0 12px; }
+    .muted { margin-top: 14px; font-size: 11.5px; color: #7c8ba1; line-height: 1.7; }
+    .doc p { margin: 0 0 8px; font-size: 12px; line-height: 1.75; color: #b6c3d4; }
+    .doc table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .doc th { text-align: left; font-weight: 500; color: var(--muted); white-space: nowrap;
+              padding: 6px 8px; border-bottom: 1px solid var(--line); }
+    .doc td { padding: 7px 8px; border-bottom: 1px solid rgba(34,49,74,.65);
+              color: #b6c3d4; vertical-align: top; line-height: 1.6; }
+    .doc tr:last-child td { border-bottom: none; }
+    .doc code { font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+                color: #8fd3f4; background: rgba(56,189,248,.08); padding: 1px 5px; border-radius: 3px; }
+    .doc .note { margin-top: 10px; padding: 9px 12px; border-left: 2px solid var(--warn);
+                 background: rgba(245,158,11,.07); font-size: 11.5px; color: #d9c6a6; line-height: 1.7; }
+
+    .steps { list-style: none; margin: 0; padding: 0 0 0 9px; }
+    .steps li { position: relative; padding: 0 0 14px 26px; margin-left: 9px;
+                border-left: 1px solid var(--line); font-size: 12px; line-height: 1.7; color: #b6c3d4; }
+    .steps li:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .steps li::before { counter-increment: step; content: counter(step);
+                        position: absolute; left: -10px; top: -1px; width: 19px; height: 19px;
+                        border-radius: 50%; background: #182843; border: 1px solid var(--line);
+                        color: var(--accent); font-size: 10px; display: grid; place-items: center; }
+    .steps { counter-reset: step; }
+    .steps strong { color: #dfe9f5; font-weight: 500; }
+
+    .links { display: flex; flex-direction: column; gap: 8px; }
+    .links a, .links .plain { display: flex; align-items: baseline; gap: 8px; font-size: 12px;
+                              color: #9dc8e6; text-decoration: none; }
+    .links a:hover { color: var(--accent); text-decoration: underline; }
+    .links .plain { color: var(--muted); }
+    .links em { font-style: normal; font-size: 11px; color: #5d6b80; margin-left: auto; text-align: right; }
+
+    .faq details { border-bottom: 1px solid rgba(34,49,74,.65); padding: 8px 0; }
+    .faq details:last-child { border-bottom: none; }
+    .faq summary { cursor: pointer; font-size: 12.5px; color: #d3deea; list-style: none; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::before { content: "+"; display: inline-block; width: 14px; color: var(--accent); }
+    .faq details[open] summary::before { content: "−"; }
+    .faq p { margin: 8px 0 2px 14px; font-size: 12px; color: #a9b8ca; line-height: 1.75; }
+
+    /* 锚点跳转时给固定头部留一点余量 */
+    #kpi, #flow, #bars, #rank, #trend { scroll-margin-top: 12px; }
   </style>
 </head>
 <body>
@@ -168,10 +235,11 @@
     <div class="head-right">
       <span class="clock">{{ clock }}</span>
       <span class="pill"><span class="dot" :class="online ? 'ok' : 'bad'"></span>{{ online ? '实时连接' : '连接中断，正在重试' }}</span>
+      <button class="pill btn" @click="openHelp('metric')" title="指标口径、异常处置与常见问题">帮助</button>
     </div>
   </header>
 
-  <div class="kpis">
+  <div class="kpis" id="kpi">
     <div class="kpi accent" :class="{ alerting: alerting }">
       <div class="k">实时客流</div>
       <div class="v">{{ total }}<small>人次/秒</small></div>
@@ -207,7 +275,7 @@
   </div>
 
   <div class="grid">
-    <section class="card flow-card">
+    <section class="card flow-card" id="flow">
       <div class="card-head">
         <h2>线网客流分布</h2>
         <span class="hint">圆面积对应客流</span>
@@ -233,7 +301,7 @@
       <div class="flow-note" v-if="flowNodes.length">线宽=线路 · 圆大小=当前秒客流</div>
     </section>
 
-    <section class="card">
+    <section class="card" id="bars">
       <div class="card-head">
         <div>
           <h2>各站实时客流</h2>
@@ -255,7 +323,7 @@
       </div>
     </section>
 
-    <aside class="card rank-card">
+    <aside class="card rank-card" id="rank">
       <div class="card-head">
         <h2>近 5 分钟客流排行</h2>
         <span class="hint">TOP 5 · 点击看单站</span>
@@ -281,7 +349,7 @@
     </aside>
   </div>
 
-  <section class="card" style="margin-top: 16px">
+  <section class="card" id="trend" style="margin-top: 16px">
     <div class="card-head">
       <h2>近 5 分钟客流趋势
         <span class="hint" style="margin-left: 12px">虚线为告警阈值 · 当前 {{ selected || '全部站点' }}</span>
@@ -303,7 +371,79 @@
     <span class="fresh" :class="freshLevel">{{ freshText }}</span>
     <span>窗口 1 秒 · 趋势回溯 5 分钟 · 排行统计最近 5 分钟</span>
   </footer>
+
+  <div class="drawer-mask" v-if="helpOpen" @click.self="helpOpen = false"></div>
+  <aside class="drawer" v-if="helpOpen" role="dialog" aria-label="帮助">
+    <div class="drawer-head">
+      <h3>帮助</h3>
+      <button class="drawer-close" @click="helpOpen = false" aria-label="关闭">×</button>
+    </div>
+    <div class="drawer-tabs">
+      <button class="tab" :class="{ on: helpTab === 'metric' }" @click="helpTab = 'metric'">指标口径</button>
+      <button class="tab" :class="{ on: helpTab === 'judge' }" @click="helpTab = 'judge'">异常处置</button>
+      <button class="tab" :class="{ on: helpTab === 'faq' }" @click="helpTab = 'faq'">问答与入口</button>
+    </div>
+
+    <div class="drawer-body doc">
+      <div v-if="helpTab === 'metric'">
+        <p class="lead">这块屏只回答当下三件事：哪个站人多、有没有超阈值、数据还可不可信。</p>
+        <table>
+          <tbody>
+            <tr><td>实时客流</td><td>当前 1 秒窗口内所有事件的 passengers 之和，每秒清零重算</td></tr>
+            <tr><td>活跃站点</td><td>当前窗口内有数据的站点数</td></tr>
+            <tr><td>迟到</td><td>事件时间早于窗口起点 2 秒以上，只计数，不计入客流</td></tr>
+            <tr><td>非法</td><td>缺必填字段、类型不对、JSON 解析失败</td></tr>
+            <tr><td>排行与趋势</td><td>排行取最近 5 分钟累计降序；趋势按秒聚合，可回溯 1—60 分钟</td></tr>
+          </tbody>
+        </table>
+        <div class="note">窗口按处理时间切、进站出站合并统计、迟到不回补；快照 TTL 5 秒，消费者停 5 秒以上页面就显示“暂无数据”。阈值走服务端配置，页面只照下发的值渲染。</div>
+      </div>
+
+      <div v-if="helpTab === 'judge'">
+        <table>
+          <thead><tr><th>页面现象</th><th>多半是什么</th><th>先做什么</th></tr></thead>
+          <tbody>
+            <tr><td>页脚变黄</td><td>数据停更 10—30 秒，消费者重连中</td><td>看消费者终端最后一行</td></tr>
+            <tr><td>页脚变红</td><td>消费者退出，或 Redis 断了</td><td>查 metric:snapshot 是否还在</td></tr>
+            <tr><td>右上角连接中断</td><td>接口请求失败，服务没起或端口不通</td><td>直接打开 /api/snapshot</td></tr>
+            <tr><td>有数字、柱子全空</td><td>快照结构异常或接口降级</td><td>看接口返回的原始 JSON</td></tr>
+            <tr><td>迟到或非法持续涨</td><td>时钟不同步，或上游数据变脏</td><td>对时，再看消费者日志</td></tr>
+          </tbody>
+        </table>
+        <h4>处置顺序</h4>
+        <ol class="steps">
+          <li>看页脚与连接状态，先分清是<strong>没数据</strong>还是<strong>连不上</strong>。</li>
+          <li>打开 <code>/api/snapshot</code>：空结构说明没快照，有数据说明问题在本页。</li>
+          <li>执行 <code>redis-cli GET metric:snapshot</code>：键在查接口，键不在查消费者。</li>
+          <li>按 Redis/MySQL → 消费者 → 模拟器 → 页面 的顺序重启，再用固定样例回放验证。</li>
+        </ol>
+        <p class="muted">链路：模拟器 → gate_events → 消费者 → 快照/明细表 → 接口 → 本页。停在哪一层，页脚和连接状态会先给信号。</p>
+      </div>
+
+      <div v-if="helpTab === 'faq'">
+        <div class="faq">
+          <details><summary>为什么实时客流每秒都归零？</summary>
+            <p>它是 1 秒窗口值，不是累计值。要展示今日累计得新增字段，属于契约变更。</p></details>
+          <details><summary>排行有数字，柱子却是 0？</summary>
+            <p>排行看最近 5 分钟，柱子只看当前这一秒。刚回放完也会这样，5 分钟后自然消失。</p></details>
+          <details><summary>告警阈值在哪里改？</summary>
+            <p>改环境变量 ALERT_THRESHOLD 后重启服务端；页面直接使用接口下发的值。</p></details>
+          <details><summary>能看到进站和出站分开统计吗？</summary>
+            <p>暂时不能，目前合并统计。消息里有 event_type，拆开属于契约待定项。</p></details>
+        </div>
+        <h4>接口入口</h4>
+        <div class="links">
+          <a href="/api/snapshot" target="_blank" rel="noopener">/api/snapshot <em>当前快照</em></a>
+          <a href="/api/series?minutes=5" target="_blank" rel="noopener">/api/series <em>历史序列</em></a>
+          <a href="/api/rank?top=5" target="_blank" rel="noopener">/api/rank <em>站点排行</em></a>
+          <span class="plain">docs/02-设计/指标口径.md <em>口径</em></span>
+          <span class="plain">docs/02-设计/接口契约.md <em>字段</em></span>
+        </div>
+      </div>
+    </div>
+  </aside>
 </div>
+
 {% endverbatim %}
 
 <script>
@@ -342,6 +482,8 @@ createApp({
     const online = ref(true);
     const line = ref("all");
     const selected = ref("");        // 空串代表全部站点，下钻时存 station_id
+    const helpOpen = ref(false);     // 帮助抽屉默认关闭，首屏不放说明文字
+    const helpTab = ref("metric");
     const barEl = ref(null);
     const lineEl = ref(null);
     // 契约 4.1 写明前端不要写死阈值：这里只是首帧占位，真实值由 /api/snapshot 下发
@@ -461,6 +603,15 @@ createApp({
     function barWidth(passengers) {
       // 留 4% 下限，否则小客流的名次条几乎看不见
       return Math.max(4, Math.round((passengers / rankMax.value) * 100)) + "%";
+    }
+
+    function openHelp(tab) {
+      helpTab.value = tab || "metric";
+      helpOpen.value = true;
+    }
+
+    function onKeydown(e) {
+      if (e.key === "Escape") helpOpen.value = false;
     }
 
     function pickStation(id) {
@@ -689,10 +840,13 @@ createApp({
       timers.push(setInterval(loadSnapshot, SNAPSHOT_MS));
       timers.push(setInterval(loadHistory, HISTORY_MS));
       timers.push(setInterval(() => { now.value = Date.now(); }, 1000));
+      // Esc 关闭帮助抽屉，值班时手不离键盘也能退出
+      document.addEventListener("keydown", onKeydown);
     });
 
     onUnmounted(() => {
       timers.forEach(clearInterval);
+      document.removeEventListener("keydown", onKeydown);
       observer && observer.disconnect();
       barChart && barChart.dispose();
       trendChart && trendChart.dispose();
@@ -702,7 +856,7 @@ createApp({
              threshold, alerting, clock, stationCount, visibleStations, snapshotLabel,
              freshText, freshLevel, barWidth, barEl, lineEl,
              selected, stationOptions, pickStation, flowLines, flowNodes, spark, health,
-             alertSeconds, alertPeak };
+             alertSeconds, alertPeak, helpOpen, helpTab, openHelp };
   }
 }).mount("#app");
 </script>
