@@ -616,3 +616,76 @@ def test_summary_today_ignores_broken_cache(client, base_ts, cache_redis):
     make_rows("A01", base_ts, count=1, passengers=6)
     cache_redis.store[views.summary_cache_key()] = "{不是 JSON"
     assert client.get("/api/summary/today").json()["total"] == 6
+
+
+# ---- 方向列尚未双写时：in/out 必须为 null，不能拿乘降量顶替 ----
+
+def old_rows(station_id, base, count=2, passengers=5):
+    """模拟计算端双写之前的写入：只填 passengers，in/out 两列保持默认 0。"""
+    for i in range(count):
+        MetricWindow.objects.create(
+            ts=base + timedelta(seconds=i),
+            station_id=station_id,
+            passengers=passengers,
+        )
+
+
+@pytest.mark.django_db
+def test_series_in_out_are_null_when_direction_unknown(client, base_ts):
+    """关键：不能把合并乘降量报成进站量或出站量。"""
+    old_rows("A01", base_ts, count=1, passengers=40)
+    point = client.get("/api/series").json()["points"][0]
+    assert point["in"] is None and point["out"] is None
+    # 合并总量仍有值，旧前端读 passengers 不受影响
+    assert point["total"] == 40 and point["passengers"] == 40
+
+
+@pytest.mark.django_db
+def test_series_direction_filter_does_not_invent_numbers(client, base_ts):
+    """切到 out 时曾把总量报成出站量，这是编造，必须为 null。"""
+    old_rows("A01", base_ts, count=1, passengers=40)
+    point = client.get("/api/series?direction=out").json()["points"][0]
+    assert point["in"] is None and point["out"] is None
+    assert point["total"] == 40
+
+
+@pytest.mark.django_db
+def test_rank_in_out_are_null_when_direction_unknown(client, base_ts, station_file):
+    """排行里名次仍按合并总量排，但分项给 null。"""
+    station_file({"A01": {"line_id": "L1"}, "B01": {"line_id": "L1"}})
+    old_rows("A01", base_ts, count=1, passengers=10)
+    old_rows("B01", base_ts, count=1, passengers=30)
+    top = client.get("/api/rank?top=2").json()["top"]
+    assert [r["station_id"] for r in top] == ["B01", "A01"]
+    assert all(r["in"] is None and r["out"] is None for r in top)
+    assert [r["passengers"] for r in top] == [30, 10]
+
+
+@pytest.mark.django_db
+def test_rank_still_orders_by_total_when_direction_unknown(client, base_ts):
+    """方向未知时切 out 不能把名次打乱，仍按已知的总量降序。"""
+    old_rows("A01", base_ts, count=1, passengers=10)
+    old_rows("B01", base_ts, count=1, passengers=30)
+    top = client.get("/api/rank?direction=out&top=2").json()["top"]
+    assert [r["passengers"] for r in top] == [30, 10]
+
+
+@pytest.mark.django_db
+def test_summary_today_null_direction_but_keeps_total(client, base_ts, station_file):
+    station_file({"A01": {"line_id": "L1"}})
+    old_rows("A01", base_ts, count=2, passengers=6)
+    body = client.get("/api/summary/today").json()
+    assert body["in"] is None and body["out"] is None
+    assert body["net"] is None          # 缺一个方向就谈不上净流入
+    assert body["total"] == 12          # 合并乘降量仍然可信
+    assert body["lines"][0]["total"] == 12
+    assert body["lines"][0]["in"] is None
+    assert body["top_stations"][0]["total"] == 12
+
+
+@pytest.mark.django_db
+def test_summary_today_known_direction_gives_numbers(client, base_ts):
+    """一旦计算端双写，in/out/net 立刻变成真实数字，不需要改代码。"""
+    make_rows("A01", base_ts, count=1, passengers=10, in_p=8, out_p=2)
+    body = client.get("/api/summary/today").json()
+    assert (body["in"], body["out"], body["net"], body["total"]) == (8, 2, 6, 10)

@@ -254,20 +254,24 @@ def resolve_window(request):
 
 
 def direction_sums(in_sum, out_sum, total, direction):
-    """按方向把 (in, out, total) 归成最终展示的两个数。
+    """把 (进站, 出站, 合并总量) 归成对外展示的 (in, out, total)。
 
-    迁移刚落地时 in/out 两列还是 0（旧消费者只写 passengers），
-    这时退化成用 passengers 兜底，否则加了列却全是零，看板上像服务端漏了数。
-    两列只要有值就信它们，不再回退——真实数据里 in 和 out 可以同时为 0。
+    关键约定：**方向未知时 in/out 返回 None，不拿总量顶替**。
+    计算端双写 in/out 之前，两列恒为 0，而 passengers 是进+出的合并乘降量。
+    早先的写法把总量记到所选方向上，于是 `?direction=out` 会报
+    "出站 1188"——那 1188 其实是进出之和，属于编造。人数字段宁可给 null，
+    也不能给一个看起来合理、实际口径错误的数，否则前端与报表都会照着错。
+
+    判定"已知"的依据：两列不全为 0。两列都为 0 但总量大于 0，只能是老数据；
+    总量也为 0 时是真的没数据，返回 0 更自然。
     """
-    if in_sum == 0 and out_sum == 0 and total:
-        # 兜底：把总量记到所选方向上，切"进站"时至少曲线不是一条零线
-        return (0, total) if direction == "out" else (total, 0)
+    if in_sum == 0 and out_sum == 0:
+        return (0, 0, 0) if not total else (None, None, total)
     if direction == "in":
-        return in_sum, 0
+        return in_sum, 0, in_sum
     if direction == "out":
-        return 0, out_sum
-    return in_sum, out_sum
+        return 0, out_sum, out_sum
+    return in_sum, out_sum, in_sum + out_sum
 
 
 def query_rows(fn, fallback):
@@ -308,7 +312,7 @@ def collect_points(rows, direction="all"):
     """
     points = []
     for row in rows:
-        in_sum, out_sum = direction_sums(
+        in_sum, out_sum, point_total = direction_sums(
             row.get("in_p") or 0,
             row.get("out_p") or 0,
             row.get("passengers") or 0,
@@ -319,8 +323,9 @@ def collect_points(rows, direction="all"):
             "ts": local_iso(row.get("bucket") or row["ts"]),
             "in": in_sum,
             "out": out_sum,
-            "total": in_sum + out_sum,
-            "passengers": in_sum + out_sum,
+            "total": point_total,
+            # passengers 是 v1.2 的合并总量，方向未知时它仍有值，供旧前端继续画线
+            "passengers": point_total,
         })
     return points
 
@@ -430,16 +435,19 @@ def fetch_rank(since, until, line_id, direction, top):
     # 站点数很少，取全量后在 Python 里按算出来的值排，口径只有一处。
     scored = []
     for row in rows:
-        in_sum, out_sum = direction_sums(
+        in_sum, out_sum, row_total = direction_sums(
             row["in_p"] or 0, row["out_p"] or 0, row["passengers"] or 0, direction
         )
-        key = {"in": in_sum, "out": out_sum}.get(direction, in_sum + out_sum)
-        scored.append((key, row["station_id"], in_sum, out_sum))
+        # 方向未知时 in/out 是 None，退而按已知的合并总量排名次：
+        # 名次仍然正确，只是该行不会谎报"进站多少"。
+        key = {"in": in_sum, "out": out_sum}.get(direction)
+        scored.append((key if key is not None else row_total, row["station_id"],
+                       in_sum, out_sum, row_total))
     # 客流相同时按站点编码升序，保证同一份数据每次请求名次一致
     scored.sort(key=lambda item: (-item[0], item[1]))
     return [
-        {"station_id": sid, "in": in_sum, "out": out_sum, "passengers": in_sum + out_sum}
-        for _, sid, in_sum, out_sum in scored[:top]
+        {"station_id": sid, "in": in_sum, "out": out_sum, "passengers": row_total}
+        for _, sid, in_sum, out_sum, row_total in scored[:top]
     ]
 
 
@@ -494,8 +502,13 @@ def fetch_today(since):
 
 
 def build_today(rows, since, now):
-    """把分组结果拼成契约 4.4 的响应体。"""
-    in_sum, out_sum = direction_sums(
+    """把分组结果拼成契约 4.4 的响应体。
+
+    方向未知时（计算端尚未双写 in/out）`in`/`out`/`net` 为 `null`，
+    `total` 仍给合并乘降量：宁可让前端显示"进站 —"，也不能把乘降量
+    当成进站量报出去。
+    """
+    in_sum, out_sum, total = direction_sums(
         sum(r["in_p"] or 0 for r in rows),
         sum(r["out_p"] or 0 for r in rows),
         sum(r["passengers"] or 0 for r in rows),
@@ -507,10 +520,11 @@ def build_today(rows, since, now):
         # updated_at 也要本地时区：和 since、points[].ts 混着用两种时区，
         # 前端算"数据延迟几秒"会差 8 小时
         "updated_at": local_iso(now),
-        "total": in_sum + out_sum,
+        "total": total,
         "in": in_sum,
         "out": out_sum,
-        "net": in_sum - out_sum,
+        # 任一方向未知就无法算净流入，此时给 null 而不是 0
+        "net": None if in_sum is None or out_sum is None else in_sum - out_sum,
         "peak": today_peak(since),
         "lines": today_lines(rows),
         "top_stations": today_top(rows),
@@ -544,35 +558,49 @@ def today_peak(since):
 
 
 def today_lines(rows):
-    """按线路汇总。metric_window 没有 line_id 列，映射关系只存在站点表里。"""
+    """按线路汇总。metric_window 没有 line_id 列，映射关系只存在站点表里。
+
+    与总量同样的口径：方向未知时线路的 `in`/`out` 是 `null`，
+    `total` 仍给合并值。逐站累加时跳过 None，最后按是否出现过未知来决定。
+    """
     mapping = build_line_map()
     grouped = {}
     for row in rows:
         line_id = mapping.get(row["station_id"])
         bucket = grouped.setdefault(
-            line_id, {"line_id": line_id, "in": 0, "out": 0, "total": 0}
+            line_id,
+            {"line_id": line_id, "in": 0, "out": 0, "total": 0, "unknown": False},
         )
-        in_sum, out_sum = direction_sums(
+        in_sum, out_sum, row_total = direction_sums(
             row["in_p"] or 0, row["out_p"] or 0, row["passengers"] or 0, "all"
         )
-        bucket["in"] += in_sum
-        bucket["out"] += out_sum
-        bucket["total"] += in_sum + out_sum
-    return sorted(grouped.values(), key=lambda b: (-b["total"], b["line_id"] or ""))
+        bucket["total"] += row_total
+        if in_sum is None:
+            bucket["unknown"] = True
+        else:
+            bucket["in"] += in_sum
+            bucket["out"] += out_sum
+    result = []
+    for bucket in grouped.values():
+        if bucket["unknown"]:
+            bucket["in"] = bucket["out"] = None
+        bucket.pop("unknown")
+        result.append(bucket)
+    return sorted(result, key=lambda b: (-b["total"], b["line_id"] or ""))
 
 
 def today_top(rows, limit=TOP_STATIONS):
-    """今日分站 TopN。"""
+    """今日分站 TopN。方向未知时 in/out 为 null，排序仍按合并总量。"""
     result = []
     for row in rows:
-        in_sum, out_sum = direction_sums(
+        in_sum, out_sum, row_total = direction_sums(
             row["in_p"] or 0, row["out_p"] or 0, row["passengers"] or 0, "all"
         )
         result.append({
             "station_id": row["station_id"],
             "in": in_sum,
             "out": out_sum,
-            "total": in_sum + out_sum,
+            "total": row_total,
         })
     result.sort(key=lambda item: (-item["total"], item["station_id"]))
     return result[:limit]
