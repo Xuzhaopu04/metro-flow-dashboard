@@ -79,3 +79,7 @@ LATE_TOLERANCE_WINDOWS = int(os.environ.get("LATE_TOLERANCE_WINDOWS", "2"))
 # 默认 100 与 README 的"单窗口超过 100 人次"一致；放环境变量是为了演示时能快速压低取值，
 # 不必改代码。判定在服务端做（责任矩阵接口点 ④"谁写=服务"），前端只读结果。
 ALERT_THRESHOLD = int(os.environ.get("ALERT_THRESHOLD", "100"))
+
+# 今日汇总缓存秒数。该接口要扫当日全表，前端轮询时开销明显；
+# 累计值变化慢，缓存几秒无可感知影响。0 表示不缓存。
+SUMMARY_CACHE_TTL = int(os.environ.get("SUMMARY_CACHE_TTL", "10"))

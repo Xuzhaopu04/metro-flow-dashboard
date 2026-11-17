@@ -12,6 +12,10 @@ class MetricWindow(models.Model):
     ts = models.DateTimeField(db_index=True, help_text="窗口结束时间")
     station_id = models.CharField(max_length=16, help_text="站点编码")
     passengers = models.IntegerField(default=0, help_text="窗口内新增客流")
+    # 契约 v1.3 新增两列。默认 0 而不是允许 NULL：迁移先落地、旧消费者继续只写
+    # passengers 时，这两列读出来是 0，接口不会因为 None 参与求和而炸。
+    in_passengers = models.IntegerField(default=0, help_text="窗口内进站量")
+    out_passengers = models.IntegerField(default=0, help_text="窗口内出站量")
     late_count = models.IntegerField(default=0, help_text="该站点在本窗口内的迟到事件数")
 
     class Meta:
