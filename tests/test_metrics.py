@@ -232,8 +232,8 @@ def test_v13_event_type_out_counts_as_out():
     assert result["out_total"] == 4
 
 
-def test_v13_missing_event_type_defaults_to_in():
-    """兼容：缺 event_type 字段的历史事件按 in 处理，不计为非法。"""
+def test_v13_missing_event_type_is_invalid():
+    """event_type 缺失按非法事件处理，不静默算成进站（组长 P0 口径）。"""
     e = {
         "event_id": "t-old",
         "station_id": "Y01",
@@ -243,11 +243,25 @@ def test_v13_missing_event_type_defaults_to_in():
         # 故意不写 event_type
     }
     result = aggregate_window([e], START)
-    assert result["invalid_count"] == 0
-    assert result["total"] == 5
-    s = result["stations"][0]
-    assert s["in_passengers"] == 5
-    assert s["out_passengers"] == 0
+    assert result["invalid_count"] == 1
+    assert result["total"] == 0
+    assert result["stations"] == []
+
+
+def test_v13_unknown_event_type_is_invalid():
+    """event_type 不是 in/out（如 foo）按非法事件处理，不能算进/出站。"""
+    e = {
+        "event_id": "t-bad-type",
+        "station_id": "Y02",
+        "line_id": "L9",
+        "event_type": "foo",
+        "passengers": 5,
+        "event_time": START.isoformat(timespec="milliseconds"),
+    }
+    result = aggregate_window([e], START)
+    assert result["invalid_count"] == 1
+    assert result["total"] == 0
+    assert result["stations"] == []
 
 
 def test_v13_empty_window_in_out_zero():

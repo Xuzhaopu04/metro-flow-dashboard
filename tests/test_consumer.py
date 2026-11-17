@@ -165,6 +165,33 @@ def test_persist_window_late_only_still_persisted():
         assert kwargs["ts"] == WINDOW_START
 
 
+def test_persist_window_writes_in_out_split():
+    """v1.3：落库必须传 in_passengers/out_passengers，与事件方向一致。"""
+    import stream.consumer as consumer
+    consumer._django_ready = True
+    consumer._persist_warned = False
+
+    result = {
+        "total": 7,
+        "stations": [
+            {"station_id": "A01", "line_id": "L1", "passengers": 7,
+             "in_passengers": 5, "out_passengers": 2},
+        ],
+        "late_count": 0,
+        "invalid_count": 0,
+        "late_by_station": {},
+    }
+    fake_model = MagicMock()
+    with patch(_PATCH_TARGET, fake_model):
+        consumer.persist_window(WINDOW_START, result)
+        fake_model.objects.bulk_create.assert_called_once()
+        _, kwargs = fake_model.call_args
+        assert kwargs["station_id"] == "A01"
+        assert kwargs["passengers"] == 7
+        assert kwargs["in_passengers"] == 5
+        assert kwargs["out_passengers"] == 2
+
+
 # ---- replay 模式测试（采集 backfill 阻塞点修复）----
 
 def test_replay_bucket_groups_by_event_time():

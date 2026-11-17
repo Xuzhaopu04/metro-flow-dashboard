@@ -67,8 +67,14 @@ def aggregate_window(
             event_time = parse_time(event["event_time"])
             count = int(event["passengers"])
             station_id = str(event["station_id"])
-            event_type = str(event.get("event_type") or "in").lower()
         except (KeyError, TypeError, ValueError):
+            invalid_count += 1
+            continue
+
+        # v1.3：event_type 缺失或不是 in/out 一律算非法，不静默归到某个方向
+        raw_type = event.get("event_type")
+        event_type = str(raw_type).strip().lower() if raw_type is not None else ""
+        if event_type not in ("in", "out"):
             invalid_count += 1
             continue
 
@@ -82,7 +88,6 @@ def aggregate_window(
             continue
 
         passengers[station_id] += count
-        # v1.3 加法：按 event_type 拆分进站/出站，缺省按 in 处理（历史事件兼容）
         if event_type == "out":
             out_pass[station_id] += count
         else:
