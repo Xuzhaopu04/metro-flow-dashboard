@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>14-域模型</title>
+<style>
+:root {
+  color-scheme: light;
+
+  --bg-base-default: #ffffff;
+  --bg-base-secondary: #f5f5f5;
+  --bg-base-tertiary: #e5e5e5;
+  --bg-overlay-l1: rgba(115, 115, 115, 0.08);
+  --bg-overlay-l2: rgba(115, 115, 115, 0.12);
+  --bg-overlay-l3: rgba(115, 115, 115, 0.16);
+  --bg-overlay-l4: rgba(115, 115, 115, 0.20);
+  --bg-brand: #4b3fe3;
+  --bg-brand-hover: #6a6fff;
+  --bg-brand-active: #3f31c6;
+  --text-default: #171717;
+  --text-secondary: #404040;
+  --text-tertiary: #737373;
+  --text-disabled: #a1a1a1;
+  --text-brand: #4b3fe3;
+  --text-onbrand: #ffffff;
+  --border-neutral-l1: rgba(115, 115, 115, 0.12);
+  --border-neutral-l2: rgba(115, 115, 115, 0.18);
+  --border-neutral-l3: rgba(115, 115, 115, 0.36);
+  --status-primary-default: #2f74ff;
+  --status-primary-surface-l1: rgba(47, 116, 255, 0.12);
+  --status-success-default: #15a877;
+  --status-success-surface-l1: rgba(64, 176, 139, 0.12);
+  --status-alert-default: #fea900;
+  --status-alert-surface-l1: rgba(254, 169, 0, 0.14);
+  --status-warning-default: #e27900;
+  --status-warning-surface-l1: rgba(226, 121, 0, 0.12);
+  --status-error-default: #e8463a;
+  --status-error-surface-l1: rgba(232, 70, 58, 0.12);
+  --radius-sm-8: 8px;
+  --radius-md-12: 12px;
+  --spacer-4: 4px;
+  --spacer-8: 8px;
+  --spacer-12: 12px;
+  --spacer-16: 16px;
+  --spacer-20: 20px;
+  --spacer-24: 24px;
+  --font-family-default: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --viz-series-coral: #f87454;
+  --viz-series-amber: #edaa45;
+  --viz-series-mint: #1dc981;
+  --viz-series-teal: #59e8e8;
+  --viz-series-sky: #22a5f7;
+  --viz-series-violet: #b655fc;
+  --viz-series-magenta: #fb9dd7;
+  --viz-series-indigo: #b6a3ff;
+  --viz-series-lime: #a6ea39;
+  --viz-series-slate: #859ead;
+  --viz-ui-chart-axis: var(--border-neutral-l2);
+  --viz-ui-chart-tick: var(--text-secondary);
+  --viz-ui-legend-label: var(--text-secondary);
+  --viz-ui-legend-value: var(--text-default);
+  --color-background-primary: var(--bg-base-default);
+  --color-background-secondary: var(--bg-base-secondary);
+  --color-background-overlay-l1: var(--bg-overlay-l1);
+  --color-background-overlay-l2: var(--bg-overlay-l2);
+  --color-text-primary: var(--text-default);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-border-secondary: var(--border-neutral-l2);
+  --color-border-tertiary: var(--border-neutral-l1);
+  --border-radius-lg: var(--radius-sm-8);
+  --border-radius-xl: var(--radius-md-12);
+  --font-sans: var(--font-family-default);
+  --font-mono: var(--font-family-mono);
+  --w-bg: var(--bg-base-default);
+  --w-surface: var(--bg-base-secondary);
+  --w-surface-soft: var(--bg-overlay-l1);
+  --w-surface-hover: var(--bg-overlay-l2);
+  --w-text: var(--text-default);
+  --w-text-2: var(--text-secondary);
+  --w-text-3: var(--text-tertiary);
+  --w-border: var(--border-neutral-l1);
+  --w-border-strong: var(--border-neutral-l2);
+  --w-brand: var(--bg-brand);
+  --w-info: var(--status-primary-default);
+  --w-success: var(--status-success-default);
+  --w-warning: var(--status-warning-default);
+  --w-danger: var(--status-error-default);
+  --w-radius-sm: var(--radius-sm-8);
+  --w-radius-md: var(--radius-md-12);
+  --w-font: var(--font-family-default);
+  --w-mono: var(--font-family-mono);
+  --w-series-1: var(--viz-series-sky);
+  --w-series-2: var(--viz-series-mint);
+  --w-series-3: var(--viz-series-amber);
+  --w-series-4: var(--viz-series-violet);
+  --w-chart-axis: var(--viz-ui-chart-axis);
+  --w-chart-tick: var(--viz-ui-chart-tick);
+
+
+  --color-coral-1: #fff5f5;
+  --color-coral-2: #ffe3e3;
+  --color-coral-3: #ffc9c9;
+  --color-coral-4: #ffa8a8;
+  --color-coral-5: #ff8787;
+  --color-coral-6: #ff6b6b;
+  --color-coral-7: #fa5252;
+  --color-coral-8: #f03e3e;
+  --color-coral-9: #e03131;
+  --color-coral-10: #c92a2a;
+  --color-amber-1: #fff9db;
+  --color-amber-2: #fff3bf;
+  --color-amber-3: #ffec99;
+  --color-amber-4: #ffe066;
+  --color-amber-5: #ffd43b;
+  --color-amber-6: #fcc419;
+  --color-amber-7: #fab005;
+  --color-amber-8: #f59f00;
+  --color-amber-9: #f08c00;
+  --color-amber-10: #e67700;
+  --color-lime-1: #f4fce3;
+  --color-lime-2: #e9fac8;
+  --color-lime-3: #d8f5a2;
+  --color-lime-4: #c0eb75;
+  --color-lime-5: #a9e34b;
+  --color-lime-6: #94d82d;
+  --color-lime-7: #82c91e;
+  --color-lime-8: #74b816;
+  --color-lime-9: #66a80f;
+  --color-lime-10: #5c940d;
+  --color-mint-1: #e6fcf5;
+  --color-mint-2: #c3fae8;
+  --color-mint-3: #96f2d7;
+  --color-mint-4: #63e6be;
+  --color-mint-5: #38d9a9;
+  --color-mint-6: #20c997;
+  --color-mint-7: #12b886;
+  --color-mint-8: #0ca678;
+  --color-mint-9: #099268;
+  --color-mint-10: #087f5b;
+  --color-teal-1: #e6fcfc;
+  --color-teal-2: #c3fafa;
+  --color-teal-3: #96f2f2;
+  --color-teal-4: #63e6e6;
+  --color-teal-5: #38d9d9;
+  --color-teal-6: #20c9c9;
+  --color-teal-7: #12b8b8;
+  --color-teal-8: #0ca6a6;
+  --color-teal-9: #099292;
+  --color-teal-10: #087f7f;
+  --color-sky-1: #e7f5ff;
+  --color-sky-2: #d0ebff;
+  --color-sky-3: #a5d8ff;
+  --color-sky-4: #74c0fc;
+  --color-sky-5: #4dabf7;
+  --color-sky-6: #339af0;
+  --color-sky-7: #228be6;
+  --color-sky-8: #1c7ed6;
+  --color-sky-9: #1971c2;
+  --color-sky-10: #1864ab;
+  --color-indigo-1: #edf2ff;
+  --color-indigo-2: #dbe4ff;
+  --color-indigo-3: #bac8ff;
+  --color-indigo-4: #91a7ff;
+  --color-indigo-5: #748ffc;
+  --color-indigo-6: #5c7cfa;
+  --color-indigo-7: #4c6ef5;
+  --color-indigo-8: #4263eb;
+  --color-indigo-9: #3b5bdb;
+  --color-indigo-10: #364fc7;
+  --color-violet-1: #f3f0ff;
+  --color-violet-2: #e5dbff;
+  --color-violet-3: #d0bfff;
+  --color-violet-4: #b197fc;
+  --color-violet-5: #9775fa;
+  --color-violet-6: #845ef7;
+  --color-violet-7: #7950f2;
+  --color-violet-8: #7048e8;
+  --color-violet-9: #6741d9;
+  --color-violet-10: #5f3dc4;
+  --color-magenta-1: #fff0f6;
+  --color-magenta-2: #ffdeeb;
+  --color-magenta-3: #fcc2d7;
+  --color-magenta-4: #faa2c1;
+  --color-magenta-5: #f783ac;
+  --color-magenta-6: #f06595;
+  --color-magenta-7: #e64980;
+  --color-magenta-8: #d6336c;
+  --color-magenta-9: #c2255c;
+  --color-magenta-10: #a61e4d;
+  --color-slate-1: #f8f9fa;
+  --color-slate-2: #f1f3f5;
+  --color-slate-3: #e9ecef;
+  --color-slate-4: #dee2e6;
+  --color-slate-5: #ced4da;
+  --color-slate-6: #adb5bd;
+  --color-slate-7: #868e96;
+  --color-slate-8: #495057;
+  --color-slate-9: #343a40;
+  --color-slate-10: #212529;
+
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+  --bg-base-default: #171717;
+  --bg-base-secondary: #262626;
+  --bg-base-tertiary: #404040;
+  --bg-overlay-l1: rgba(212, 212, 212, 0.04);
+  --bg-overlay-l2: rgba(212, 212, 212, 0.06);
+  --bg-overlay-l3: rgba(212, 212, 212, 0.08);
+  --bg-overlay-l4: rgba(212, 212, 212, 0.12);
+  --text-default: #e5e5e5;
+  --text-secondary: #a3a3a3;
+  --text-tertiary: #737373;
+  --text-disabled: #404040;
+  --text-brand: #6a6fff;
+  --border-neutral-l1: rgba(212, 212, 212, 0.10);
+  --border-neutral-l2: rgba(212, 212, 212, 0.16);
+  --border-neutral-l3: rgba(212, 212, 212, 0.20);
+  --status-primary-default: #387bff;
+  --status-primary-surface-l1: rgba(53, 121, 255, 0.18);
+  --status-success-default: #33c192;
+  --status-success-surface-l1: rgba(0, 165, 110, 0.18);
+  --status-alert-default: #d29d00;
+  --status-alert-surface-l1: rgba(210, 157, 0, 0.16);
+  --status-warning-default: #d27e24;
+  --status-warning-surface-l1: rgba(210, 126, 36, 0.16);
+  --status-error-default: #f65a5a;
+  --status-error-surface-l1: rgba(246, 70, 70, 0.18);
+  --viz-series-teal: #78f2f2;
+
+  }
+}
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg-base-default);
+  color: var(--text-default);
+  font-family: var(--font-family-default);
+}
+#widget-root {
+  width: 100%;
+  box-sizing: border-box;
+}
+* {
+  box-sizing: border-box;
+}
+.t { font-size: 14px; fill: var(--text-default); }
+.ts { font-size: 12px; fill: var(--text-secondary); }
+.th { font-size: 14px; fill: var(--text-default); font-weight: 500; }
+.box { fill: var(--bg-base-secondary); stroke: var(--border-neutral-l2); }
+.arr { stroke: var(--text-tertiary); fill: none; stroke-width: 1.5; }
+.leader { stroke: var(--text-tertiary); stroke-width: 0.5; stroke-dasharray: 4 3; fill: none; }
+.node { cursor: pointer; }
+.node:hover rect, .node:hover .box { filter: brightness(0.97); }
+.node:hover text { opacity: 0.8; }
+
+g.c-coral>rect,g.c-coral>ellipse,g.c-coral>circle,g.c-coral>polygon,
+rect.c-coral,ellipse.c-coral,circle.c-coral,polygon.c-coral{fill:var(--color-coral-1);stroke:var(--color-coral-7)}
+.c-coral>.th,.c-coral>.t{fill:var(--color-coral-9)}
+.c-coral>.ts{fill:var(--color-coral-7)}
+@media (prefers-color-scheme: dark){
+  g.c-coral>rect,g.c-coral>ellipse,g.c-coral>circle,g.c-coral>polygon,
+  rect.c-coral,ellipse.c-coral,circle.c-coral,polygon.c-coral{fill:var(--color-coral-9);stroke:var(--color-coral-5)}
+  .c-coral>.th,.c-coral>.t{fill:var(--color-coral-3)}
+  .c-coral>.ts{fill:var(--color-coral-5)}
+}
+
+
+g.c-amber>rect,g.c-amber>ellipse,g.c-amber>circle,g.c-amber>polygon,
+rect.c-amber,ellipse.c-amber,circle.c-amber,polygon.c-amber{fill:var(--color-amber-1);stroke:var(--color-amber-7)}
+.c-amber>.th,.c-amber>.t{fill:var(--color-amber-9)}
+.c-amber>.ts{fill:var(--color-amber-7)}
+@media (prefers-color-scheme: dark){
+  g.c-amber>rect,g.c-amber>ellipse,g.c-amber>circle,g.c-amber>polygon,
+  rect.c-amber,ellipse.c-amber,circle.c-amber,polygon.c-amber{fill:var(--color-amber-9);stroke:var(--color-amber-5)}
+  .c-amber>.th,.c-amber>.t{fill:var(--color-amber-3)}
+  .c-amber>.ts{fill:var(--color-amber-5)}
+}
+
+
+g.c-lime>rect,g.c-lime>ellipse,g.c-lime>circle,g.c-lime>polygon,
+rect.c-lime,ellipse.c-lime,circle.c-lime,polygon.c-lime{fill:var(--color-lime-1);stroke:var(--color-lime-7)}
+.c-lime>.th,.c-lime>.t{fill:var(--color-lime-9)}
+.c-lime>.ts{fill:var(--color-lime-7)}
+@media (prefers-color-scheme: dark){
+  g.c-lime>rect,g.c-lime>ellipse,g.c-lime>circle,g.c-lime>polygon,
+  rect.c-lime,ellipse.c-lime,circle.c-lime,polygon.c-lime{fill:var(--color-lime-9);stroke:var(--color-lime-5)}
+  .c-lime>.th,.c-lime>.t{fill:var(--color-lime-3)}
+  .c-lime>.ts{fill:var(--color-lime-5)}
+}
+
+
+g.c-mint>rect,g.c-mint>ellipse,g.c-mint>circle,g.c-mint>polygon,
+rect.c-mint,ellipse.c-mint,circle.c-mint,polygon.c-mint{fill:var(--color-mint-1);stroke:var(--color-mint-7)}
+.c-mint>.th,.c-mint>.t{fill:var(--color-mint-9)}
+.c-mint>.ts{fill:var(--color-mint-7)}
+@media (prefers-color-scheme: dark){
+  g.c-mint>rect,g.c-mint>ellipse,g.c-mint>circle,g.c-mint>polygon,
+  rect.c-mint,ellipse.c-mint,circle.c-mint,polygon.c-mint{fill:var(--color-mint-9);stroke:var(--color-mint-5)}
+  .c-mint>.th,.c-mint>.t{fill:var(--color-mint-3)}
+  .c-mint>.ts{fill:var(--color-mint-5)}
+}
+
+
+g.c-teal>rect,g.c-teal>ellipse,g.c-teal>circle,g.c-teal>polygon,
+rect.c-teal,ellipse.c-teal,circle.c-teal,polygon.c-teal{fill:var(--color-teal-1);stroke:var(--color-teal-7)}
+.c-teal>.th,.c-teal>.t{fill:var(--color-teal-9)}
+.c-teal>.ts{fill:var(--color-teal-7)}
+@media (prefers-color-scheme: dark){
+  g.c-teal>rect,g.c-teal>ellipse,g.c-teal>circle,g.c-teal>polygon,
+  rect.c-teal,ellipse.c-teal,circle.c-teal,polygon.c-teal{fill:var(--color-teal-9);stroke:var(--color-teal-5)}
+  .c-teal>.th,.c-teal>.t{fill:var(--color-teal-3)}
+  .c-teal>.ts{fill:var(--color-teal-5)}
+}
+
+
+g.c-sky>rect,g.c-sky>ellipse,g.c-sky>circle,g.c-sky>polygon,
+rect.c-sky,ellipse.c-sky,circle.c-sky,polygon.c-sky{fill:var(--color-sky-1);stroke:var(--color-sky-7)}
+.c-sky>.th,.c-sky>.t{fill:var(--color-sky-9)}
+.c-sky>.ts{fill:var(--color-sky-7)}
+@media (prefers-color-scheme: dark){
+  g.c-sky>rect,g.c-sky>ellipse,g.c-sky>circle,g.c-sky>polygon,
+  rect.c-sky,ellipse.c-sky,circle.c-sky,polygon.c-sky{fill:var(--color-sky-9);stroke:var(--color-sky-5)}
+  .c-sky>.th,.c-sky>.t{fill:var(--color-sky-3)}
+  .c-sky>.ts{fill:var(--color-sky-5)}
+}
+
+
+g.c-indigo>rect,g.c-indigo>ellipse,g.c-indigo>circle,g.c-indigo>polygon,
+rect.c-indigo,ellipse.c-indigo,circle.c-indigo,polygon.c-indigo{fill:var(--color-indigo-1);stroke:var(--color-indigo-7)}
+.c-indigo>.th,.c-indigo>.t{fill:var(--color-indigo-9)}
+.c-indigo>.ts{fill:var(--color-indigo-7)}
+@media (prefers-color-scheme: dark){
+  g.c-indigo>rect,g.c-indigo>ellipse,g.c-indigo>circle,g.c-indigo>polygon,
+  rect.c-indigo,ellipse.c-indigo,circle.c-indigo,polygon.c-indigo{fill:var(--color-indigo-9);stroke:var(--color-indigo-5)}
+  .c-indigo>.th,.c-indigo>.t{fill:var(--color-indigo-3)}
+  .c-indigo>.ts{fill:var(--color-indigo-5)}
+}
+
+
+g.c-violet>rect,g.c-violet>ellipse,g.c-violet>circle,g.c-violet>polygon,
+rect.c-violet,ellipse.c-violet,circle.c-violet,polygon.c-violet{fill:var(--color-violet-1);stroke:var(--color-violet-7)}
+.c-violet>.th,.c-violet>.t{fill:var(--color-violet-9)}
+.c-violet>.ts{fill:var(--color-violet-7)}
+@media (prefers-color-scheme: dark){
+  g.c-violet>rect,g.c-violet>ellipse,g.c-violet>circle,g.c-violet>polygon,
+  rect.c-violet,ellipse.c-violet,circle.c-violet,polygon.c-violet{fill:var(--color-violet-9);stroke:var(--color-violet-5)}
+  .c-violet>.th,.c-violet>.t{fill:var(--color-violet-3)}
+  .c-violet>.ts{fill:var(--color-violet-5)}
+}
+
+
+g.c-magenta>rect,g.c-magenta>ellipse,g.c-magenta>circle,g.c-magenta>polygon,
+rect.c-magenta,ellipse.c-magenta,circle.c-magenta,polygon.c-magenta{fill:var(--color-magenta-1);stroke:var(--color-magenta-7)}
+.c-magenta>.th,.c-magenta>.t{fill:var(--color-magenta-9)}
+.c-magenta>.ts{fill:var(--color-magenta-7)}
+@media (prefers-color-scheme: dark){
+  g.c-magenta>rect,g.c-magenta>ellipse,g.c-magenta>circle,g.c-magenta>polygon,
+  rect.c-magenta,ellipse.c-magenta,circle.c-magenta,polygon.c-magenta{fill:var(--color-magenta-9);stroke:var(--color-magenta-5)}
+  .c-magenta>.th,.c-magenta>.t{fill:var(--color-magenta-3)}
+  .c-magenta>.ts{fill:var(--color-magenta-5)}
+}
+
+
+g.c-slate>rect,g.c-slate>ellipse,g.c-slate>circle,g.c-slate>polygon,
+rect.c-slate,ellipse.c-slate,circle.c-slate,polygon.c-slate{fill:var(--color-slate-1);stroke:var(--color-slate-7)}
+.c-slate>.th,.c-slate>.t{fill:var(--color-slate-9)}
+.c-slate>.ts{fill:var(--color-slate-7)}
+@media (prefers-color-scheme: dark){
+  g.c-slate>rect,g.c-slate>ellipse,g.c-slate>circle,g.c-slate>polygon,
+  rect.c-slate,ellipse.c-slate,circle.c-slate,polygon.c-slate{fill:var(--color-slate-9);stroke:var(--color-slate-5)}
+  .c-slate>.th,.c-slate>.t{fill:var(--color-slate-3)}
+  .c-slate>.ts{fill:var(--color-slate-5)}
+}
+
+</style>
+</head>
+<body>
+<div id="widget-root">
+<style>
+:root {
+  color-scheme: light;
+  --surface: #F7F7F8;
+  --surface-muted: #EFEFF2;
+  --text: #171717;
+  --text-muted: #52525B;
+  --border: rgba(23, 23, 23, 0.12);
+  --brand: #0FDC78;
+  --brand-soft: #E5FFF2;
+  --brand-text: #004D26;
+  --radius: 8px;
+  --radius-card: 12px;
+  --spacer-12: 12px;
+  --spacer-16: 16px;
+  --spacer-20: 20px;
+  --font-sans: "SF Pro Text", "PingFang SC", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --text-caption: 12px/18px;
+  --text-body: 14px/20px;
+  --text-title: 16px/24px;
+}
+:root[data-widget-theme="dark"] {
+  color-scheme: dark;
+  --surface: #171717;
+  --surface-muted: #262626;
+  --text: #E5E5E5;
+  --text-muted: #A1A1AA;
+  --border: rgba(229, 229, 229, 0.12);
+  --brand: #32F08C;
+  --brand-soft: #004D26;
+  --brand-text: #E5FFF2;
+}
+.widget { color: var(--text); font: var(--weight-regular) var(--text-body) var(--font-sans); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: var(--spacer-20); }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacer-12); flex-wrap: wrap; margin-bottom: var(--spacer-16); }
+.title { font: var(--weight-medium) var(--text-title) var(--font-sans); color: var(--text); }
+.sub { font: var(--weight-regular) var(--text-caption) var(--font-sans); color: var(--text-muted); }
+svg { width: 100%; height: auto; display: block; }
+.n-title { fill: var(--text); font: var(--weight-medium) var(--text-body) var(--font-sans); }
+.n-attr { fill: var(--text-muted); font: var(--weight-regular) var(--text-caption) var(--font-sans); }
+.n-meth { fill: var(--text); font: var(--weight-regular) var(--text-caption) var(--font-sans); }
+.div { stroke: var(--border); stroke-width: 1; }
+.arr { stroke: var(--text-muted); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.cap { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.lbl { fill: var(--text-muted); font: var(--weight-medium) var(--text-caption) var(--font-sans); text-anchor: middle; }
+g.c-neutral > rect { fill: var(--surface-muted); stroke: var(--border); }
+g.c-brand > rect { fill: var(--brand-soft); stroke: var(--brand); }
+.c-brand .n-title, .c-brand .n-attr, .c-brand .n-meth { fill: var(--brand-text); }
+</style>
+<div class="widget" data-dynamic-ui-widget data-template="node-flow">
+  <div class="card">
+    <div class="head">
+      <div class="title">领域模型：核心实体与关联</div>
+      <div class="sub">依据用例表 UC-01～UC-18 抽取</div>
+    </div>
+    <svg viewBox="0 0 720 560" role="img" aria-label="地铁客流监测领域模型类图">
+      <defs>
+        <marker id="dm-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+          <path d="M1 1 L7 4 L1 7 Z" fill="var(--text-muted)"></path>
+        </marker>
+      </defs>
+      <path class="arr" d="M130 218 V340" marker-end="url(#dm-arrow)"></path>
+      <path class="arr" d="M220 145 H270" marker-end="url(#dm-arrow)"></path>
+      <path class="arr" d="M590 218 V340" marker-end="url(#dm-arrow)"></path>
+      <path class="arr" d="M540 218 L450 340" marker-end="url(#dm-arrow)"></path>
+      <path class="arr" d="M500 422 H450" marker-end="url(#dm-arrow)"></path>
+      <path class="arr" d="M270 418 H220" marker-end="url(#dm-arrow)"></path>
+      <g>
+        <rect class="cap" x="227" y="115" width="36" height="20" rx="10"></rect>
+        <text class="lbl" x="245" y="129">包含</text>
+      </g>
+      <g>
+        <rect class="cap" x="148" y="268" width="36" height="20" rx="10"></rect>
+        <text class="lbl" x="166" y="282">查看</text>
+      </g>
+      <g>
+        <rect class="cap" x="608" y="268" width="36" height="20" rx="10"></rect>
+        <text class="lbl" x="626" y="282">产生</text>
+      </g>
+      <g>
+        <rect class="cap" x="512" y="280" width="36" height="20" rx="10"></rect>
+        <text class="lbl" x="530" y="294">统计</text>
+      </g>
+      <g>
+        <rect class="cap" x="457" y="392" width="36" height="20" rx="10"></rect>
+        <text class="lbl" x="475" y="406">聚合</text>
+      </g>
+      <g>
+        <rect class="cap" x="227" y="388" width="36" height="20" rx="10"></rect>
+        <text class="lbl" x="245" y="402">汇总</text>
+      </g>
+      <g class="c-neutral">
+        <rect x="40" y="80" width="180" height="138" rx="8"></rect>
+        <text class="n-title" x="52" y="100">值班员</text>
+        <text class="n-attr" x="52" y="124">- 工号 : str</text>
+        <text class="n-attr" x="52" y="142">- 姓名 : str</text>
+        <text class="n-attr" x="52" y="160">- 所属部门 : str</text>
+        <line class="div" x1="52" y1="168" x2="208" y2="168"></line>
+        <text class="n-meth" x="52" y="182">+ 查看实时客流()</text>
+        <text class="n-meth" x="52" y="200">+ 按线路筛选()</text>
+      </g>
+      <g class="c-neutral">
+        <rect x="270" y="80" width="180" height="120" rx="8"></rect>
+        <text class="n-title" x="282" y="100">线路</text>
+        <text class="n-attr" x="282" y="124">- 线路编号 : str</text>
+        <text class="n-attr" x="282" y="142">- 线路名称 : str</text>
+        <line class="div" x1="282" y1="150" x2="438" y2="150"></line>
+        <text class="n-meth" x="282" y="164">+ 查询车站()</text>
+        <text class="n-meth" x="282" y="182">+ 统计线路客流()</text>
+      </g>
+      <g class="c-neutral">
+        <rect x="500" y="80" width="180" height="138" rx="8"></rect>
+        <text class="n-title" x="512" y="100">车站</text>
+        <text class="n-attr" x="512" y="124">- 车站编号 : str</text>
+        <text class="n-attr" x="512" y="142">- 车站名称 : str</text>
+        <text class="n-attr" x="512" y="160">- 客流权重 : float</text>
+        <line class="div" x1="512" y1="168" x2="668" y2="168"></line>
+        <text class="n-meth" x="512" y="182">+ 统计窗口客流()</text>
+        <text class="n-meth" x="512" y="200">+ 查询所属线路()</text>
+      </g>
+      <g class="c-neutral">
+        <rect x="40" y="340" width="180" height="156" rx="8"></rect>
+        <text class="n-title" x="52" y="360">实时快照</text>
+        <text class="n-attr" x="52" y="384">- 时间戳 : datetime</text>
+        <text class="n-attr" x="52" y="402">- 总客流 : int</text>
+        <text class="n-attr" x="52" y="420">- 迟到数 : int</text>
+        <text class="n-attr" x="52" y="438">- 非法数 : int</text>
+        <line class="div" x1="52" y1="446" x2="208" y2="446"></line>
+        <text class="n-meth" x="52" y="460">+ 判定是否过期()</text>
+        <text class="n-meth" x="52" y="478">+ 组装站点明细()</text>
+      </g>
+      <g class="c-neutral">
+        <rect x="270" y="340" width="180" height="156" rx="8"></rect>
+        <text class="n-title" x="282" y="360">客流窗口</text>
+        <text class="n-attr" x="282" y="384">- 窗口时间 : datetime</text>
+        <text class="n-attr" x="282" y="402">- 站点编号 : str</text>
+        <text class="n-attr" x="282" y="420">- 客流数 : int</text>
+        <text class="n-attr" x="282" y="438">- 迟到数 : int</text>
+        <line class="div" x1="282" y1="446" x2="438" y2="446"></line>
+        <text class="n-meth" x="282" y="460">+ 累加客流()</text>
+        <text class="n-meth" x="282" y="478">+ 判断是否重复()</text>
+      </g>
+      <g class="c-brand">
+        <rect x="500" y="340" width="180" height="174" rx="8"></rect>
+        <text class="n-title" x="512" y="360">闸机事件</text>
+        <text class="n-attr" x="512" y="384">- 事件编号 : str</text>
+        <text class="n-attr" x="512" y="402">- 站点编号 : str</text>
+        <text class="n-attr" x="512" y="420">- 进出类型 : str</text>
+        <text class="n-attr" x="512" y="438">- 乘客数 : int</text>
+        <text class="n-attr" x="512" y="456">- 事件时间 : datetime</text>
+        <line class="div" x1="512" y1="464" x2="668" y2="464"></line>
+        <text class="n-meth" x="512" y="478">+ 校验字段()</text>
+        <text class="n-meth" x="512" y="496">+ 判定是否迟到()</text>
+      </g>
+    </svg>
+  </div>
+</div>
+</div>
+<script>
+(function(){
+  if (typeof window.sendPrompt !== 'function') {
+    window.sendPrompt = function(text) {
+      console.info('[ShowWidget] sendPrompt is unavailable outside Trae:', String(text || ''));
+    };
+  }
+})();
+</script>
+</body>
+</html>
