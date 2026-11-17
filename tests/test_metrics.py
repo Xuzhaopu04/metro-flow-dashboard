@@ -255,3 +255,38 @@ def test_v13_empty_window_in_out_zero():
     result = aggregate_window([], START)
     assert result["in_total"] == 0
     assert result["out_total"] == 0
+
+
+def test_replay_mode_skips_late_check():
+    """replay/backfill 模式下，本该判迟到的老事件也要算进窗口。
+
+    场景：窗口 START，事件比窗口早 10 秒（远超过 late_tolerance=2s）：
+    - 默认模式 → 迟到跳过，total=0，late_count=1
+    - replay（ignore_late=True）→ 算进窗口，total=7，late_count=0
+    """
+    late_event = event(station="A01", line="L1", passengers=7, offset_ms=-10000, event_type="in")
+
+    # 默认模式：迟到跳过（late_tolerance 默认 2 窗口 = 2s，事件早 10s 远超）
+    default = aggregate_window([late_event], START)
+    assert default["total"] == 0
+    assert default["late_count"] == 1
+    assert default["stations"] == []
+
+    # replay 模式：跳过迟到判定，算进窗口
+    replayed = aggregate_window([late_event], START, ignore_late=True)
+    assert replayed["total"] == 7
+    assert replayed["in_total"] == 7
+    assert replayed["out_total"] == 0
+    assert replayed["late_count"] == 0
+    assert len(replayed["stations"]) == 1
+    assert replayed["stations"][0]["station_id"] == "A01"
+    assert replayed["stations"][0]["passengers"] == 7
+
+
+def test_replay_mode_normal_events_still_work():
+    """replay 模式不影响正常事件（本来就在窗口内的）。"""
+    normal = event(station="B02", line="L2", passengers=3, offset_ms=0)
+    result = aggregate_window([normal], START, ignore_late=True)
+    assert result["total"] == 3
+    assert result["late_count"] == 0
+    assert result["stations"][0]["passengers"] == 3

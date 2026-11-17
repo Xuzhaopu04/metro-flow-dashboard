@@ -147,8 +147,12 @@ def persist_window(window_start, result):
             _persist_warned = True
 
 
-def run_window(client, state, first=False):
-    """跑一个窗口：读数、切窗、聚合、写快照、落库、确认消息。"""
+def run_window(client, state, replay=False, first=False):
+    """跑一个窗口：读数、切窗、聚合、写快照、落库、确认消息。
+
+    replay=True 用于 backfill/回填：事件可能比正常实时流早得多，
+    此时跳过迟到判定，全部算进窗口。
+    """
     started = time.monotonic()
     window_start = window_start_of(datetime.now(TZ), WINDOW_SECONDS)
     window_end = window_start + timedelta(seconds=WINDOW_SECONDS)
@@ -158,7 +162,10 @@ def run_window(client, state, first=False):
     if len(state["deferred"]) > MAX_DEFERRED:
         state["deferred"] = state["deferred"][-MAX_DEFERRED:]
 
-    result = aggregate_window(ready, window_start, WINDOW_SECONDS, LATE_TOLERANCE_WINDOWS)
+    result = aggregate_window(
+        ready, window_start, WINDOW_SECONDS, LATE_TOLERANCE_WINDOWS,
+        ignore_late=replay,
+    )
     snapshot = build_snapshot(window_start, result)
     client.set(SNAPSHOT_KEY, json.dumps(snapshot, ensure_ascii=False), ex=SNAPSHOT_TTL)
     persist_window(window_start, result)
@@ -183,6 +190,11 @@ def run_window(client, state, first=False):
 def main() -> int:
     parser = argparse.ArgumentParser(description="实时指标消费者")
     parser.add_argument("--once", action="store_true", help="只跑一个窗口，用于自测")
+    parser.add_argument(
+        "--replay",
+        action="store_true",
+        help="回填/回放模式：跳过迟到判定，老事件全算进窗口",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -207,14 +219,16 @@ def main() -> int:
     state = {"name": f"worker-{os.getpid()}", "deferred": []}
     signal.signal(signal.SIGINT, _stop)
     signal.signal(signal.SIGTERM, _stop)
-    log.info("消费者 %s 启动，订阅 %s，窗口 %ss", state["name"], EVENT_STREAM, WINDOW_SECONDS)
+    log.info("消费者 %s 启动，订阅 %s，窗口 %ss %s",
+             state["name"], EVENT_STREAM, WINDOW_SECONDS,
+             "[REPLAY]" if args.replay else "")
 
     try:
         if args.once:
-            run_window(client, state, first=True)
+            run_window(client, state, replay=args.replay, first=True)
             return 0
         while _running:
-            run_window(client, state)
+            run_window(client, state, replay=args.replay)
     except redis.RedisError as exc:
         log.error("Redis 连接中断：%s", exc)
         return 1

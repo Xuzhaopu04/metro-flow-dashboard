@@ -43,11 +43,13 @@ def aggregate_window(
     window_start: datetime,
     window_seconds: int = 1,
     late_tolerance_windows: int = 2,
+    ignore_late: bool = False,
 ) -> dict:
     """把一个窗口内的事件聚合成指标。
 
-    返回的 stations 按客流降序，供前端直接渲染排行；late_by_station 只给落库用，
-    不写进快照，避免内部字段混进对外契约。
+    ignore_late=True 用于 replay/backfill 模式：
+    历史事件本应被判迟到跳过，但回放场景需要完整算出。
+    正常消费（实时流）保持 ignore_late=False，迟到容忍 = late_tolerance_windows。
     """
     window_end = window_start + timedelta(seconds=window_seconds)
     late_threshold = window_start - timedelta(seconds=window_seconds * late_tolerance_windows)
@@ -70,7 +72,8 @@ def aggregate_window(
             invalid_count += 1
             continue
 
-        if event_time < late_threshold:
+        # replay/backfill 模式跳过迟到判定：事件全算进窗口
+        if not ignore_late and event_time < late_threshold:
             late_count += 1
             late_by_station[station_id] += 1
             continue
