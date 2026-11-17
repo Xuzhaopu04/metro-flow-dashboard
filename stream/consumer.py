@@ -21,7 +21,12 @@ import redis
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.env import load_env  # noqa: E402
-from stream.metrics import aggregate_window, split_ready, window_start_of  # noqa: E402
+from stream.metrics import (  # noqa: E402
+    aggregate_window,
+    parse_time,
+    split_ready,
+    window_start_of,
+)
 
 # 下面这些常量在模块导入时就读完，必须在此之前加载 .env
 load_env()
@@ -147,24 +152,71 @@ def persist_window(window_start, result):
             _persist_warned = True
 
 
+def _replay_bucket(events):
+    """replay 模式下按 event_time 把事件分到各自的历史窗口。
+
+    正常模式的 deferred/split_ready 是为实时流"等窗口关闭"设计的，
+    replay 全是历史事件，直接按窗口起点分桶即可，不用等。
+    """
+    from collections import defaultdict
+
+    buckets = defaultdict(list)
+    for event in events:
+        try:
+            ts = parse_time(event["event_time"])
+        except (KeyError, TypeError, ValueError):
+            continue  # 脏事件 replay 也不处理，算进 invalid 的在 aggregate 里
+        ws = window_start_of(ts, WINDOW_SECONDS)
+        buckets[ws].append(event)
+    return buckets
+
+
 def run_window(client, state, replay=False, first=False):
     """跑一个窗口：读数、切窗、聚合、写快照、落库、确认消息。
 
-    replay=True 用于 backfill/回填：事件可能比正常实时流早得多，
-    此时跳过迟到判定，全部算进窗口。
+    replay=True 用于 backfill/回填：
+      - 事件按 event_time 分桶，各自落在正确的历史窗口
+      - 逐窗聚合、逐窗落库（ts 是历史窗口起点，不是 now）
+      - 不写 SNAPSHOT_KEY，避免大屏被历史数据冲掉
+      - 跳过迟到判定（ignore_late=True）
     """
     started = time.monotonic()
+    events, msg_ids = read_batch(client, state["name"])
+
+    if replay:
+        # —— replay 路径：分桶 → 逐窗处理 → 不写快照 ——
+        buckets = _replay_bucket(state["deferred"] + events)
+        state["deferred"] = []  # replay 不需要 deferred
+        windows_processed = 0
+        total_passengers = 0
+        for ws in sorted(buckets):
+            result = aggregate_window(
+                buckets[ws], ws, WINDOW_SECONDS, LATE_TOLERANCE_WINDOWS,
+                ignore_late=True,
+            )
+            persist_window(ws, result)
+            total_passengers += result["total"]
+            windows_processed += 1
+        if msg_ids:
+            client.xack(EVENT_STREAM, CONSUMER_GROUP, *msg_ids)
+        log.info(
+            "[REPLAY] 处理 %d 个历史窗口，共 %d 客流",
+            windows_processed, total_passengers,
+        )
+        # replay 模式不 sleep，尽快把积压历史处理完
+        return
+
+    # —— 正常路径：now() 做窗口起点 ——
     window_start = window_start_of(datetime.now(TZ), WINDOW_SECONDS)
     window_end = window_start + timedelta(seconds=WINDOW_SECONDS)
 
-    events, msg_ids = read_batch(client, state["name"])
     ready, state["deferred"] = split_ready(state["deferred"] + events, window_end)
     if len(state["deferred"]) > MAX_DEFERRED:
         state["deferred"] = state["deferred"][-MAX_DEFERRED:]
 
     result = aggregate_window(
         ready, window_start, WINDOW_SECONDS, LATE_TOLERANCE_WINDOWS,
-        ignore_late=replay,
+        ignore_late=False,
     )
     snapshot = build_snapshot(window_start, result)
     client.set(SNAPSHOT_KEY, json.dumps(snapshot, ensure_ascii=False), ex=SNAPSHOT_TTL)
