@@ -548,3 +548,71 @@ def test_stations_does_not_leak_internal_line_name(client, station_file):
     station = client.get("/api/stations").json()["stations"][0]
     assert set(station) == {"station_id", "name", "line_id", "order",
                             "lng", "lat", "color"}
+
+
+class CacheRedis:
+    """带 setex 的最小 Redis 替身，用来验证今日汇总的缓存读写。"""
+
+    def __init__(self):
+        self.store = {}
+        self.ttl = {}
+
+    def get(self, key):
+        return self.store.get(key)
+
+    def setex(self, key, ttl, value):
+        self.store[key] = value
+        self.ttl[key] = ttl
+
+
+@pytest.fixture
+def cache_redis(monkeypatch):
+    fake = CacheRedis()
+    monkeypatch.setattr(views, "_client", fake)
+    return fake
+
+
+@pytest.mark.django_db
+def test_summary_today_writes_cache(client, base_ts, cache_redis):
+    """有数据时写缓存，键按日期分，TTL 取配置值。"""
+    make_rows("A01", base_ts, count=1, passengers=5)
+    key = views.summary_cache_key()
+    client.get("/api/summary/today")
+    assert key in cache_redis.store
+    assert cache_redis.ttl[key] == settings.SUMMARY_CACHE_TTL
+
+
+@pytest.mark.django_db
+def test_summary_today_serves_cache(client, base_ts, cache_redis):
+    """命中缓存时不再查库：把库清空，响应仍应给出缓存里的数字。"""
+    make_rows("A01", base_ts, count=1, passengers=7)
+    first = client.get("/api/summary/today").json()
+    MetricWindow.objects.all().delete()
+    second = client.get("/api/summary/today").json()
+    assert second["total"] == first["total"] == 7
+
+
+@pytest.mark.django_db
+def test_summary_today_does_not_cache_degraded_result(client, monkeypatch, cache_redis):
+    """查库降级时不能写缓存，否则一次数据库抖动会把 0 值钉在缓存里。"""
+    break_db(monkeypatch)
+    body = client.get("/api/summary/today").json()
+    assert body["total"] == 0
+    assert cache_redis.store == {}
+
+
+@pytest.mark.django_db
+def test_summary_today_ttl_zero_disables_cache(client, base_ts, cache_redis, monkeypatch):
+    """TTL 配 0 表示不缓存，联调口径时能每次都看真实库。"""
+    monkeypatch.setattr(settings, "SUMMARY_CACHE_TTL", 0)
+    make_rows("A01", base_ts, count=1, passengers=5)
+    client.get("/api/summary/today")
+    assert cache_redis.store == {}
+
+
+@pytest.mark.django_db
+def test_summary_today_ignores_broken_cache(client, base_ts, cache_redis):
+    """缓存内容坏了要回退查库，不能把坏数据吐给页面。"""
+    make_rows("A01", base_ts, count=1, passengers=6)
+    cache_redis.store[views.summary_cache_key()] = "{不是 JSON"
+    assert client.get("/api/summary/today").json()["total"] == 6

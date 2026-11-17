@@ -578,12 +578,62 @@ def today_top(rows, limit=TOP_STATIONS):
     return result[:limit]
 
 
+def summary_cache_key():
+    """按日期分键：跨零点后旧键自然不再被读到，不用额外清理。"""
+    return f"metric:summary:{today_start().strftime('%Y%m%d')}"
+
+
+def read_summary_cache():
+    """读今日汇总缓存。没有、过期、JSON 坏、Redis 挂，一律返回 None 视为未命中。"""
+    if settings.SUMMARY_CACHE_TTL <= 0:
+        return None
+    try:
+        raw = get_redis().get(summary_cache_key())
+    except redis.RedisError:
+        # 缓存只是省一次查询，读不到就查库；绝不因为缓存不可用而让接口失败
+        logger.warning("读今日汇总缓存失败，回退查库", exc_info=True)
+        return None
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        logger.warning("今日汇总缓存内容损坏，回退查库")
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def write_summary_cache(payload):
+    """写缓存，失败只记日志。缓存写不进去不该影响这次已经算好的响应。"""
+    if settings.SUMMARY_CACHE_TTL <= 0:
+        return
+    try:
+        get_redis().setex(
+            summary_cache_key(), settings.SUMMARY_CACHE_TTL,
+            json.dumps(payload, ensure_ascii=False),
+        )
+    except redis.RedisError:
+        logger.warning("写今日汇总缓存失败，本次结果照常返回", exc_info=True)
+
+
 def summary_today(request):
-    """今日汇总，契约 4.4。无数据时返回 0 值结构而不是 404。"""
+    """今日汇总，契约 4.4。无数据时返回 0 值结构而不是 404。
+
+    带缓存是因为要扫当日全表。命中缓存时 `updated_at` 仍是上次计算的时刻——
+    它表示"这份数字算于何时"，不是"何时返回给你"，前端据此算新鲜度才不会误判。
+    """
+    cached = read_summary_cache()
+    if cached:
+        return json_response(cached)
+
     since = today_start()
     now = timezone.now()
     rows = query_rows(lambda: fetch_today(since), [])
-    return json_response(build_today(rows, since, now))
+    payload = build_today(rows, since, now)
+    # 查库降级（空结果）时不写缓存，否则一次数据库抖动会把 0 值钉在缓存里
+    if rows:
+        write_summary_cache(payload)
+    return json_response(payload)
 
 
 def stations(request):
