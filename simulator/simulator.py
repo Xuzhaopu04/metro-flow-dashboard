@@ -6,6 +6,8 @@
     python simulator/simulator.py                    # 每秒 1 条，一直发
     python simulator/simulator.py --speed 5 --count 200
     python simulator/simulator.py --inject 0.05      # 5% 异常数据，测消费端容错
+    python simulator/simulator.py --scenario evening_peak --speed 10
+    python simulator/simulator.py --backfill 60      # 回填过去 60 分钟
     python simulator/simulator.py --replay data/samples/sample_events.json
     python simulator/simulator.py --dry-run          # 只打印，不写 Redis
 """
@@ -37,17 +39,31 @@ STREAM_MAXLEN = 100000
 _STATIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stations.json")
 try:
     with open(_STATIONS_FILE, encoding="utf-8") as _fp:
-        STATIONS = json.load(_fp)
+        _NETWORK = json.load(_fp)
+    STATIONS = _NETWORK["stations"]
+    LINES = _NETWORK["lines"]
 except FileNotFoundError:
     print(f"找不到站点配置文件 {_STATIONS_FILE}，请确认文件存在")
     sys.exit(1)
 except json.JSONDecodeError as exc:
     print(f"站点配置文件 {_STATIONS_FILE} 格式错误：{exc}")
     sys.exit(1)
+except KeyError as exc:
+    print(f"站点配置文件缺少 {exc} 段，应为 lines + stations 两段")
+    sys.exit(1)
 
 # 早高峰进站多，晚高峰出站多，平时各半
 PEAK_HOURS_IN = range(7, 10)
 PEAK_HOURS_OUT = range(17, 20)
+
+# 固定场景用于演示和压测；auto 继续按当前时钟判断
+SCENARIOS = {
+    "auto": None,
+    "morning_peak": {"in_ratio": 0.78, "max_passengers": 5},
+    "evening_peak": {"in_ratio": 0.28, "max_passengers": 5},
+    "offpeak": {"in_ratio": 0.5, "max_passengers": 3},
+    "burst": {"in_ratio": 0.5, "max_passengers": 8},
+}
 
 
 def pick_station():
@@ -56,7 +72,17 @@ def pick_station():
     return random.choices(ids, weights=weights)[0]
 
 
-def pick_direction(now):
+def passenger_upper(now, scenario):
+    rule = SCENARIOS.get(scenario)
+    if rule is not None:
+        return rule["max_passengers"]
+    return 5 if now.hour in PEAK_HOURS_IN or now.hour in PEAK_HOURS_OUT else 3
+
+
+def pick_direction(now, scenario="auto"):
+    rule = SCENARIOS.get(scenario)
+    if rule is not None:
+        return "in" if random.random() < rule["in_ratio"] else "out"
     hour = now.hour
     if hour in PEAK_HOURS_IN:
         return "in" if random.random() < 0.78 else "out"
@@ -65,19 +91,17 @@ def pick_direction(now):
     return "in" if random.random() < 0.5 else "out"
 
 
-def make_event(now=None):
+def make_event(now=None, scenario="auto"):
     now = now or datetime.now(TZ)
     station_id = pick_station()
     line_id = STATIONS[station_id]["line_id"]
-    direction = pick_direction(now)
-    # 高峰期单笔刷卡带的人也多一些
-    upper = 5 if now.hour in PEAK_HOURS_IN or now.hour in PEAK_HOURS_OUT else 3
+    direction = pick_direction(now, scenario)
     return {
         "event_id": str(uuid.uuid4()),
         "station_id": station_id,
         "line_id": line_id,
         "event_type": direction,
-        "passengers": random.randint(1, upper),
+        "passengers": random.randint(1, passenger_upper(now, scenario)),
         "event_time": now.isoformat(timespec="milliseconds"),
     }
 
@@ -153,13 +177,40 @@ def stream_forever(args, client):
     sent = 0
     while args.count == 0 or sent < args.count:
         now = datetime.now(TZ)
-        event = make_event(now)
+        event = make_event(now, args.scenario)
         if args.inject > 0 and random.random() < args.inject:
             event = corrupt(event, now)
         emit(client, event, args.dry_run)
         sent += 1
         print(f"[{sent}] {event['station_id']} {event['event_type']} {event.get('passengers')}人")
         time.sleep(interval)
+    return sent
+
+
+def backfill(args, client):
+    """按秒回填过去 N 分钟的事件，给查询页准备历史数据。
+
+    注意：消费端只接受窗口起点前 2 个窗口内的事件，更早的会被记成迟到并跳过。
+    要让回填真正落库，需要计算侧临时放宽迟到容忍度，否则这里只验证链路。
+    """
+    minutes = args.backfill
+    total = minutes * 60
+    end = datetime.now(TZ)
+    start = end - timedelta(minutes=minutes)
+    print(f"回填 {minutes} 分钟，共 {total} 条")
+    print(f"时间范围 {start.isoformat(timespec='seconds')} — {end.isoformat(timespec='seconds')}")
+    print("提示：早于消费端迟到窗口的事件会被判迟到，历史落库需计算侧配合")
+
+    sent = 0
+    for second in range(total):
+        moment = start + timedelta(seconds=second)
+        event = make_event(moment, args.scenario)
+        if args.inject > 0 and random.random() < args.inject:
+            event = corrupt(event, moment)
+        emit(client, event, args.dry_run)
+        sent += 1
+        if sent % 600 == 0:
+            print(f"已回填 {sent}/{total}")
     return sent
 
 
@@ -187,6 +238,9 @@ def main():
     parser.add_argument("--speed", type=float, default=1.0, help="倍速，1 表示每秒 1 条")
     parser.add_argument("--count", type=int, default=0, help="发送条数，0 表示不限")
     parser.add_argument("--inject", type=float, default=0.0, help="异常数据比例，0—1")
+    parser.add_argument("--scenario", default="auto", choices=list(SCENARIOS),
+                        help="场景：auto 按当前时段，其余为固定演示场景")
+    parser.add_argument("--backfill", type=int, default=0, help="回填过去 N 分钟，0 表示不回填")
     parser.add_argument("--replay", help="按样例文件重放，传入 JSONL 路径")
     parser.add_argument("--dry-run", action="store_true", help="只打印，不写队列")
     args = parser.parse_args()
@@ -197,10 +251,21 @@ def main():
     if args.count < 0:
         parser.error("--count 不能为负数")
 
+    if args.backfill < 0:
+        parser.error("--backfill 不能为负数")
+
+    if args.replay and args.backfill:
+        parser.error("--replay 与 --backfill 只能选一个")
+
     client = build_client(args.dry_run)
     sent = 0
     try:
-        sent = replay(args, client) if args.replay else stream_forever(args, client)
+        if args.replay:
+            sent = replay(args, client)
+        elif args.backfill:
+            sent = backfill(args, client)
+        else:
+            sent = stream_forever(args, client)
     except KeyboardInterrupt:
         pass
     finally:
