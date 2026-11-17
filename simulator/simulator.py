@@ -35,16 +35,45 @@ REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 EVENT_STREAM = os.environ.get("EVENT_STREAM", "gate_events")
 STREAM_MAXLEN = 100000
 
-# 站点表外置到 stations.json，改站点不碰代码；A 线是主干线，权重比 B 线高
-# 结构直接对应契约 4.5：顶层是 station_id，服务端每次原样读取，不要再包一层
+# 站点表外置到 stations.json：lines 放线路名称/颜色/顺序，stations 放站点
+# 名称、顺序、经纬度与采样权重。服务端按同样的嵌套结构读取（联调约定），
+# 结构变更属于跨模块数据文件变更，要上下游一起确认。
 _STATIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stations.json")
+
+
+def load_network(path):
+    """读站点表，返回 (lines, stations)。
+
+    顶层必须是 lines + stations 两个对象，缺了直接抛错：配置坏就该在
+    启动时挂掉，而不是带病发数据。站点级缺字段尽量容错：weight 缺了
+    给默认 1.0 参与采样，line_id 缺了跳过该站（事件六字段里 line_id
+    必填，编不出来）。
+    """
+    with open(path, encoding="utf-8") as fp:
+        payload = json.load(fp)
+    if not isinstance(payload, dict):
+        raise ValueError("站点表顶层必须是对象")
+    lines = payload.get("lines")
+    stations = payload.get("stations")
+    if not isinstance(lines, dict) or not isinstance(stations, dict):
+        raise ValueError("站点表必须有 lines 和 stations 两个对象")
+    for station_id, station in list(stations.items()):
+        if not isinstance(station, dict) or not station.get("line_id"):
+            print(f"站点 {station_id} 缺 line_id，跳过")
+            del stations[station_id]
+            continue
+        if not isinstance(station.get("weight"), (int, float)):
+            print(f"站点 {station_id} 缺 weight，按默认 1.0 参与采样")
+            station["weight"] = 1.0
+    return lines, stations
+
+
 try:
-    with open(_STATIONS_FILE, encoding="utf-8") as _fp:
-        STATIONS = json.load(_fp)
+    LINES, STATIONS = load_network(_STATIONS_FILE)
 except FileNotFoundError:
     print(f"找不到站点配置文件 {_STATIONS_FILE}，请确认文件存在")
     sys.exit(1)
-except json.JSONDecodeError as exc:
+except (json.JSONDecodeError, ValueError) as exc:
     print(f"站点配置文件 {_STATIONS_FILE} 格式错误：{exc}")
     sys.exit(1)
 
