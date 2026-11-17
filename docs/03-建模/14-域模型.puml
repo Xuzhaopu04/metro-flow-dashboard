@@ -1,0 +1,71 @@
+@startuml 14-域模型
+title 实时客流监测系统 领域模型
+left to right direction
+skinparam classAttributeIconSize 0
+hide circle
+hide empty members
+
+class 值班员 {
+  - 工号 : str
+  - 姓名 : str
+  - 所属部门 : str
+  --
+  + 查看实时客流()
+  + 按线路筛选()
+}
+
+class 线路 {
+  - 线路编号 : str
+  - 线路名称 : str
+  --
+  + 查询车站()
+  + 统计线路客流()
+}
+
+class 车站 {
+  - 车站编号 : str
+  - 车站名称 : str
+  - 客流权重 : float
+  --
+  + 统计窗口客流()
+  + 查询所属线路()
+}
+
+class 实时快照 {
+  - 时间戳 : datetime
+  - 总客流 : int
+  - 迟到数 : int
+  - 非法数 : int
+  --
+  + 判定是否过期()
+  + 组装站点明细()
+}
+
+class 客流窗口 {
+  - 窗口时间 : datetime
+  - 站点编号 : str
+  - 客流数 : int
+  - 迟到数 : int
+  --
+  + 累加客流()
+  + 判断是否重复()
+}
+
+class 闸机事件 {
+  - 事件编号 : str
+  - 站点编号 : str
+  - 进出类型 : str
+  - 乘客数 : int
+  - 事件时间 : datetime
+  --
+  + 校验字段()
+  + 判定是否迟到()
+}
+
+值班员 "1" -- "*" 实时快照 : 查看
+线路 "1" -- "*" 车站 : 包含
+车站 "1" -- "*" 闸机事件 : 产生
+车站 "1" -- "*" 客流窗口 : 统计
+闸机事件 "*" -- "1" 客流窗口 : 聚合
+客流窗口 "*" -- "1" 实时快照 : 汇总
+@enduml
