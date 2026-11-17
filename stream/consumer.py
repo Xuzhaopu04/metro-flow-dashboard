@@ -95,13 +95,27 @@ def build_snapshot(window_start, result):
 
 
 def persist_window(window_start, result):
-    """按站点写入 metric_window。写库失败只降级，不影响快照。"""
+    """按站点写入 metric_window。写库失败只降级，不影响快照。
+
+    v1.3 加法：同时写 in_passengers / out_passengers，按 event_type 拆分，
+    保证 passengers（乘降量）= in_passengers + out_passengers。
+    """
     global _django_ready, _persist_warned
 
-    counts = {s["station_id"]: s["passengers"] for s in result["stations"]}
+    # 从 stations 提取按站的 passengers / in / out；迟到站 passengers 为 0 也得落一行
+    per_station = {
+        s["station_id"]: {
+            "passengers": s["passengers"],
+            "in_passengers": s.get("in_passengers", 0),
+            "out_passengers": s.get("out_passengers", 0),
+        }
+        for s in result["stations"]
+    }
     for station_id in result["late_by_station"]:
-        counts.setdefault(station_id, 0)
-    if not counts:
+        per_station.setdefault(
+            station_id, {"passengers": 0, "in_passengers": 0, "out_passengers": 0}
+        )
+    if not per_station:
         return
 
     try:
@@ -118,10 +132,12 @@ def persist_window(window_start, result):
             MetricWindow(
                 ts=window_start,
                 station_id=station_id,
-                passengers=passengers,
+                passengers=vals["passengers"],
+                in_passengers=vals["in_passengers"],
+                out_passengers=vals["out_passengers"],
                 late_count=result["late_by_station"].get(station_id, 0),
             )
-            for station_id, passengers in counts.items()
+            for station_id, vals in per_station.items()
         ]
         MetricWindow.objects.bulk_create(rows, ignore_conflicts=True)
         _persist_warned = False

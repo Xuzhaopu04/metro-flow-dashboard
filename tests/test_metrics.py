@@ -11,12 +11,12 @@ TZ = timezone(timedelta(hours=8))
 START = datetime(2026, 10, 20, 9, 30, 0, tzinfo=TZ)
 
 
-def event(station="A01", line="L1", passengers=2, offset_ms=0, event_time=None):
+def event(station="A01", line="L1", passengers=2, offset_ms=0, event_time=None, event_type="in"):
     return {
         "event_id": "t-1",
         "station_id": station,
         "line_id": line,
-        "event_type": "in",
+        "event_type": event_type,
         "passengers": passengers,
         "event_time": event_time
         or (START + timedelta(milliseconds=offset_ms)).isoformat(timespec="milliseconds"),
@@ -36,8 +36,15 @@ def test_passengers_summed_per_station_with_line():
               event("B01", "L2", passengers=1, offset_ms=500)]
     result = aggregate_window(events, START)
     assert result["total"] == 6
-    assert result["stations"][0] == {"station_id": "A01", "line_id": "L1", "passengers": 5}
-    assert result["stations"][1] == {"station_id": "B01", "line_id": "L2", "passengers": 1}
+    # v1.3 加法：stations 每个元素现在带 in_passengers / out_passengers
+    assert result["stations"][0] == {
+        "station_id": "A01", "line_id": "L1",
+        "passengers": 5, "in_passengers": 5, "out_passengers": 0,
+    }
+    assert result["stations"][1] == {
+        "station_id": "B01", "line_id": "L2",
+        "passengers": 1, "in_passengers": 1, "out_passengers": 0,
+    }
 
 
 def test_stations_sorted_by_passengers_desc():
@@ -105,7 +112,13 @@ def test_line_id_missing_defaults_to_empty():
     result = aggregate_window([no_line_event], START)
     assert result["total"] == 3
     assert len(result["stations"]) == 1
-    assert result["stations"][0] == {"station_id": "X01", "line_id": "", "passengers": 3}
+    # v1.3 加法：stations 带 in/out
+    s = result["stations"][0]
+    assert s["station_id"] == "X01"
+    assert s["line_id"] == ""
+    assert s["passengers"] == 3
+    assert s["in_passengers"] == 3  # event_type 默认 in
+    assert s["out_passengers"] == 0
     # 不能算成非法事件
     assert result["invalid_count"] == 0
 
@@ -148,23 +161,97 @@ def test_total_equals_sum_of_stations_passengers():
 
 
 def test_result_structure_matches_contract_v1_1():
-    """契约 v1.1：聚合结果要能被 build_snapshot 直接序列化成快照。
+    """契约 v1.1 + v1.3 加法：聚合结果要能被 build_snapshot 直接序列化成快照。
 
-    这里验的是 aggregate_window 返回的 dict 结构，与 build_snapshot 消费的字段对齐。
+    v1.3 新增 in_total/out_total（顶层）和 stations 里的 in/out 拆分字段；
+    快照本身暂不写这几个新字段，但 result 必须有，供 persist_window 和服务端用。
     """
     result = aggregate_window([event()], START)
-    # 顶层键：快照用的五个 + 内部 late_by_station（不落快照）
-    expected_keys = {"total", "stations", "late_count", "invalid_count", "late_by_station"}
+    # 顶层键：v1.1 五个 + v1.3 新增的 in_total / out_total + 内部 late_by_station
+    expected_keys = {
+        "total", "in_total", "out_total",
+        "stations", "late_count", "invalid_count", "late_by_station",
+    }
     assert set(result.keys()) == expected_keys
-    # stations 内每个元素的字段必须与契约 3 的 stations[] 完全一致
+    # stations 内每个元素：v1.1 三个 + v1.3 新增 in/out
     for s in result["stations"]:
-        assert set(s.keys()) == {"station_id", "line_id", "passengers"}
+        assert set(s.keys()) == {
+            "station_id", "line_id", "passengers",
+            "in_passengers", "out_passengers",
+        }
     # 数值类型必须是 int，不能是 str / float
     assert isinstance(result["total"], int)
+    assert isinstance(result["in_total"], int)
+    assert isinstance(result["out_total"], int)
     assert isinstance(result["late_count"], int)
     assert isinstance(result["invalid_count"], int)
     for s in result["stations"]:
         assert isinstance(s["passengers"], int)
-    # 空窗口时 stations 是空 list
+        assert isinstance(s["in_passengers"], int)
+        assert isinstance(s["out_passengers"], int)
+    # 空窗口时 stations 是空 list，in_total/out_total 也必须是 0
     empty = aggregate_window([], START)
     assert empty["stations"] == []
+    assert empty["in_total"] == 0
+    assert empty["out_total"] == 0
+
+
+# ---- v1.3 契约新增：进/出站拆分 ----
+
+def test_v13_in_plus_out_equals_total():
+    """契约 v1.3 口径保证：passengers（乘降量）= in_passengers + out_passengers。"""
+    events = [
+        event("A01", passengers=2, offset_ms=100, event_type="in"),
+        event("A01", passengers=3, offset_ms=200, event_type="in"),
+        event("A01", passengers=4, offset_ms=300, event_type="out"),
+    ]
+    result = aggregate_window(events, START)
+    # 顶层一致性
+    assert result["total"] == 2 + 3 + 4  # 9
+    assert result["in_total"] == 5       # 2 + 3
+    assert result["out_total"] == 4
+    assert result["in_total"] + result["out_total"] == result["total"]
+    # 按站一致性
+    for s in result["stations"]:
+        assert s["in_passengers"] + s["out_passengers"] == s["passengers"]
+
+
+def test_v13_event_type_out_counts_as_out():
+    """event_type=out 的事件必须进 out_passengers，不能进 in_passengers。"""
+    events = [
+        event("A01", passengers=2, offset_ms=100, event_type="in"),
+        event("A01", passengers=3, offset_ms=200, event_type="out"),
+        event("A01", passengers=1, offset_ms=300, event_type="out"),
+    ]
+    result = aggregate_window(events, START)
+    s = result["stations"][0]
+    assert s["passengers"] == 6
+    assert s["in_passengers"] == 2
+    assert s["out_passengers"] == 4
+    assert result["in_total"] == 2
+    assert result["out_total"] == 4
+
+
+def test_v13_missing_event_type_defaults_to_in():
+    """兼容：缺 event_type 字段的历史事件按 in 处理，不计为非法。"""
+    e = {
+        "event_id": "t-old",
+        "station_id": "Y01",
+        "line_id": "L9",
+        "passengers": 5,
+        "event_time": START.isoformat(timespec="milliseconds"),
+        # 故意不写 event_type
+    }
+    result = aggregate_window([e], START)
+    assert result["invalid_count"] == 0
+    assert result["total"] == 5
+    s = result["stations"][0]
+    assert s["in_passengers"] == 5
+    assert s["out_passengers"] == 0
+
+
+def test_v13_empty_window_in_out_zero():
+    """空窗口时 in_total/out_total 必须显式为 0，不能丢字段。"""
+    result = aggregate_window([], START)
+    assert result["in_total"] == 0
+    assert result["out_total"] == 0

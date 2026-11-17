@@ -52,7 +52,9 @@ def aggregate_window(
     window_end = window_start + timedelta(seconds=window_seconds)
     late_threshold = window_start - timedelta(seconds=window_seconds * late_tolerance_windows)
 
-    passengers = defaultdict(int)
+    passengers = defaultdict(int)       # 乘降量（in + out），保留 v1.2 语义
+    in_pass = defaultdict(int)          # 进站量，Slice 1 新增
+    out_pass = defaultdict(int)         # 出站量，Slice 1 新增
     station_line = {}
     late_by_station = defaultdict(int)
     late_count = 0
@@ -63,6 +65,7 @@ def aggregate_window(
             event_time = parse_time(event["event_time"])
             count = int(event["passengers"])
             station_id = str(event["station_id"])
+            event_type = str(event.get("event_type") or "in").lower()
         except (KeyError, TypeError, ValueError):
             invalid_count += 1
             continue
@@ -76,14 +79,27 @@ def aggregate_window(
             continue
 
         passengers[station_id] += count
+        # v1.3 加法：按 event_type 拆分进站/出站，缺省按 in 处理（历史事件兼容）
+        if event_type == "out":
+            out_pass[station_id] += count
+        else:
+            in_pass[station_id] += count
         station_line.setdefault(station_id, event.get("line_id") or "")
 
     stations = [
-        {"station_id": sid, "line_id": station_line[sid], "passengers": n}
+        {
+            "station_id": sid,
+            "line_id": station_line[sid],
+            "passengers": n,
+            "in_passengers": in_pass[sid],
+            "out_passengers": out_pass[sid],
+        }
         for sid, n in sorted(passengers.items(), key=lambda kv: (-kv[1], kv[0]))
     ]
     return {
         "total": sum(passengers.values()),
+        "in_total": sum(in_pass.values()),
+        "out_total": sum(out_pass.values()),
         "stations": stations,
         "late_count": late_count,
         "invalid_count": invalid_count,
