@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-from stream.consumer import ensure_group, read_batch
+from stream.consumer import _replay_bucket, ensure_group, read_batch, run_window
 
 TZ = timezone(timedelta(hours=8))
 WINDOW_START = datetime(2026, 10, 20, 9, 30, 0, tzinfo=TZ)
@@ -163,3 +163,79 @@ def test_persist_window_late_only_still_persisted():
         assert kwargs["passengers"] == 0
         assert kwargs["late_count"] == 2
         assert kwargs["ts"] == WINDOW_START
+
+
+# ---- replay 模式测试（采集 backfill 阻塞点修复）----
+
+def test_replay_bucket_groups_by_event_time():
+    """回填事件按各自的 event_time 落到历史窗口，而不是全堆在 now。"""
+    events = [
+        {"station_id": "A01", "line_id": "L1", "passengers": 1,
+         "event_time": "2026-10-20T09:30:00.100+08:00"},
+        {"station_id": "A01", "line_id": "L1", "passengers": 2,
+         "event_time": "2026-10-20T09:30:00.900+08:00"},  # 同一窗口
+        {"station_id": "B01", "line_id": "L2", "passengers": 3,
+         "event_time": "2026-10-20T09:31:05.000+08:00"},  # 下一窗口
+    ]
+    buckets = _replay_bucket(events)
+    assert len(buckets) == 2
+    keys = sorted(buckets)
+    assert keys[0] == datetime(2026, 10, 20, 9, 30, 0, tzinfo=TZ)
+    assert keys[1] == datetime(2026, 10, 20, 9, 31, 5, tzinfo=TZ)
+    assert len(buckets[keys[0]]) == 2
+    assert len(buckets[keys[1]]) == 1
+
+
+def test_replay_bucket_skips_broken_event_time():
+    """坏 event_time 的事件不进桶（由 aggregate 记非法），不会让分桶崩掉。"""
+    events = [
+        {"station_id": "A01", "passengers": 1, "event_time": "not-a-time"},
+        {"station_id": "A01", "passengers": 2,
+         "event_time": "2026-10-20T09:30:00.100+08:00"},
+    ]
+    buckets = _replay_bucket(events)
+    assert len(buckets) == 1
+
+
+def test_run_window_replay_does_not_write_snapshot():
+    """replay 模式不写 SNAPSHOT_KEY（大屏不能跳），且按历史窗口逐窗落库。"""
+    import stream.consumer as consumer
+    consumer._django_ready = True
+    consumer._persist_warned = False
+
+    payload_a = {"station_id": "A01", "line_id": "L1", "passengers": 2,
+                 "event_time": "2026-10-20T09:30:00.100+08:00"}
+    payload_b = {"station_id": "A01", "line_id": "L1", "passengers": 3,
+                 "event_time": "2026-10-20T09:31:00.100+08:00"}
+
+    class FakeClient:
+        def __init__(self):
+            self.set_calls = []
+
+        def xreadgroup(self, group, consumer, streams, count=None, block=None):
+            return [("gate_events", [
+                ("1-0", {"data": json.dumps(payload_a)}),
+                ("2-0", {"data": json.dumps(payload_b)}),
+            ])]
+
+        def xack(self, stream, group, *ids):
+            pass
+
+        def set(self, key, value, ex=None):
+            self.set_calls.append(key)
+
+    client = FakeClient()
+    state = {"name": "worker-test", "deferred": []}
+
+    with patch.object(consumer, "persist_window") as fake_persist:
+        consumer.run_window(client, state, replay=True, first=True)
+
+    # 不写快照
+    assert client.set_calls == []
+    # 两个历史窗口各落一次库
+    assert fake_persist.call_count == 2
+    # 落库的 ts 是历史窗口起点，不是 now
+    first_ts = fake_persist.call_args_list[0][0][0]
+    second_ts = fake_persist.call_args_list[1][0][0]
+    assert first_ts == datetime(2026, 10, 20, 9, 30, 0, tzinfo=TZ)
+    assert second_ts == datetime(2026, 10, 20, 9, 31, 0, tzinfo=TZ)

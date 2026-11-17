@@ -43,16 +43,20 @@ def aggregate_window(
     window_start: datetime,
     window_seconds: int = 1,
     late_tolerance_windows: int = 2,
+    ignore_late: bool = False,
 ) -> dict:
     """把一个窗口内的事件聚合成指标。
 
-    返回的 stations 按客流降序，供前端直接渲染排行；late_by_station 只给落库用，
-    不写进快照，避免内部字段混进对外契约。
+    ignore_late=True 用于 replay/backfill 模式：
+    历史事件本应被判迟到跳过，但回放场景需要完整算出。
+    正常消费（实时流）保持 ignore_late=False，迟到容忍 = late_tolerance_windows。
     """
     window_end = window_start + timedelta(seconds=window_seconds)
     late_threshold = window_start - timedelta(seconds=window_seconds * late_tolerance_windows)
 
-    passengers = defaultdict(int)
+    passengers = defaultdict(int)       # 乘降量（in + out），保留 v1.2 语义
+    in_pass = defaultdict(int)          # 进站量，Slice 1 新增
+    out_pass = defaultdict(int)         # 出站量，Slice 1 新增
     station_line = {}
     late_by_station = defaultdict(int)
     late_count = 0
@@ -63,11 +67,13 @@ def aggregate_window(
             event_time = parse_time(event["event_time"])
             count = int(event["passengers"])
             station_id = str(event["station_id"])
+            event_type = str(event.get("event_type") or "in").lower()
         except (KeyError, TypeError, ValueError):
             invalid_count += 1
             continue
 
-        if event_time < late_threshold:
+        # replay/backfill 模式跳过迟到判定：事件全算进窗口
+        if not ignore_late and event_time < late_threshold:
             late_count += 1
             late_by_station[station_id] += 1
             continue
@@ -76,14 +82,27 @@ def aggregate_window(
             continue
 
         passengers[station_id] += count
+        # v1.3 加法：按 event_type 拆分进站/出站，缺省按 in 处理（历史事件兼容）
+        if event_type == "out":
+            out_pass[station_id] += count
+        else:
+            in_pass[station_id] += count
         station_line.setdefault(station_id, event.get("line_id") or "")
 
     stations = [
-        {"station_id": sid, "line_id": station_line[sid], "passengers": n}
+        {
+            "station_id": sid,
+            "line_id": station_line[sid],
+            "passengers": n,
+            "in_passengers": in_pass[sid],
+            "out_passengers": out_pass[sid],
+        }
         for sid, n in sorted(passengers.items(), key=lambda kv: (-kv[1], kv[0]))
     ]
     return {
         "total": sum(passengers.values()),
+        "in_total": sum(in_pass.values()),
+        "out_total": sum(out_pass.values()),
         "stations": stations,
         "late_count": late_count,
         "invalid_count": invalid_count,
