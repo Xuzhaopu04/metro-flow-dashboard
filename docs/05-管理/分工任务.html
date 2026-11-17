@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>实时客流大屏 · 分工与依赖看板</title>
+<style>
+  :root {
+    --bg: #f5f6f4; --panel: #ffffff;
+    --line: #e8e8e4; --line-soft: #f1f1ee;
+    --text: #14161a; --muted: #6b7280; --faint: #a8adb5;
+    --accent: #2f6bff; --accent-soft: #eef3ff;
+    --violet: #8b5cf6; --ok: #12a150; --warn: #d98b00; --alert: #e5484d;
+    --num: "Georgia", "Times New Roman", "Songti SC", serif;
+    --shadow: 0 1px 2px rgba(20,22,26,.04), 0 14px 30px -24px rgba(20,22,26,.30);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; color: var(--text); background: var(--bg);
+    font-family: "Inter", "Helvetica Neue", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; line-height: 1.65;
+  }
+  .page { max-width: 1280px; margin: 0 auto; padding: clamp(18px, 2vw, 34px); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .bar { width: 34px; height: 34px; border-radius: 10px; background: #14161a; position: relative; flex: none; }
+  .brand .bar::before { content: ""; position: absolute; inset: 9px 8px; border-radius: 2px;
+    background: repeating-linear-gradient(180deg, #fff 0 3px, transparent 3px 7px); }
+  h1 { font-size: 22px; font-weight: 650; margin: 0; letter-spacing: -.3px; }
+  .sub { font-size: 10px; letter-spacing: 2.2px; color: var(--faint); text-transform: uppercase; margin-top: 4px; }
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #5f6570;
+    border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: #fff; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(18,161,80,.12); }
+
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 22px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px 18px; box-shadow: var(--shadow); }
+  .stat .k { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .stat .k::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .stat.violet .k::before { background: var(--violet); }
+  .stat.warn .k::before { background: var(--warn); }
+  .stat.ok .k::before { background: var(--ok); }
+  .stat .v { font-family: var(--num); font-size: 34px; line-height: 1.1; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-family: "Inter", "Microsoft YaHei", sans-serif; font-size: 12px; color: var(--faint); margin-left: 5px; }
+  .stat .foot { font-size: 11.5px; color: var(--faint); margin-top: 7px; }
+
+  section { margin-top: 30px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+  h2 { font-size: 17px; font-weight: 650; margin: 0; letter-spacing: -.2px; }
+  .section-head .hint { font-size: 12px; color: var(--faint); }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 14px; }
+  .lead { font-size: 13.5px; color: #4b5563; margin: 0 0 12px; line-height: 1.8; }
+  .lead strong { color: var(--text); }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; padding: 12px 16px; margin: 14px 0; font-size: 13px; color: #2b3f6b; }
+  .callout.warn { border-left-color: var(--warn); background: #fffaeb; color: #7a5a12; }
+  .callout.alert { border-left-color: var(--alert); background: #fff7f6; color: #8f1d16; }
+
+  ul.clean { margin: 8px 0 0; padding-left: 18px; }
+  ul.clean li { margin: 6px 0; font-size: 13px; color: #4b5563; }
+  ul.clean li strong { color: var(--text); }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .cols .card { margin-top: 0; }
+  .card h3 { font-size: 13.5px; margin: 0 0 10px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+  .card h3 .tag { margin-left: auto; }
+
+  .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 500; white-space: nowrap; }
+  .tag.p0 { color: #b42318; background: #fff1f0; border: 1px solid #ffdad6; }
+  .tag.p1 { color: #a86800; background: #fff8e8; border: 1px solid #ffe7b3; }
+  .tag.p2 { color: #5f6570; background: #f4f5f3; border: 1px solid var(--line); }
+  .tag.blue { color: #2b57c9; background: #eef3ff; border: 1px solid #dbe6ff; }
+  .tag.violet { color: #6d3fd1; background: #f3efff; border: 1px solid #e4dbff; }
+  .tag.ok { color: #0b7a3b; background: #eefaf3; border: 1px solid #c9f0d9; }
+  .tag.wait { color: #a86800; background: #fff8e8; border: 1px solid #ffe7b3; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 860px; }
+  thead th { text-align: left; font-weight: 550; color: var(--faint); font-size: 11px; letter-spacing: .04em;
+    padding: 11px 12px; border-bottom: 1px solid var(--line); background: #fbfbfa; white-space: nowrap; }
+  tbody td { padding: 11px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: #4b5563; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #fcfcfa; }
+  td strong { color: var(--text); }
+  td .small { display: block; font-size: 11px; color: var(--faint); margin-top: 3px; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: #2b57c9;
+    background: #f4f5f3; padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
+
+  .slices { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .slice { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .slice::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--accent); }
+  .slice.s1::before { background: var(--violet); }
+  .slice.s2::before { background: var(--warn); }
+  .slice .no { font-size: 10.5px; letter-spacing: .12em; color: var(--faint); text-transform: uppercase; }
+  .slice h3 { font-size: 15px; margin: 5px 0 8px; }
+  .slice .goal { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; }
+  .slice ul { margin: 0; padding-left: 17px; }
+  .slice li { font-size: 12.5px; color: #4b5563; margin: 5px 0; }
+  .slice .foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 11.5px; color: var(--faint); }
+
+  .checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 18px; margin: 0; padding: 0; list-style: none; }
+  .checklist li { display: flex; gap: 9px; font-size: 12.5px; color: #4b5563; padding: 6px 0; }
+  .checklist li::before { content: ""; width: 15px; height: 15px; border: 1.5px solid #c9ccd2; border-radius: 4px; flex: none; margin-top: 3px; }
+
+  footer { margin-top: 30px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--faint); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+  @media (max-width: 720px) {
+    .page { padding: 16px; }
+    .meta { justify-content: flex-start; }
+    table { min-width: 720px; }
+    .stat .v { font-size: 28px; }
+  }
+  @media print {
+    body { background: #fff; }
+    .page { max-width: none; padding: 0; }
+    .card, .stat, .slice, .table-wrap { box-shadow: none; break-inside: avoid; }
+    section { break-inside: avoid; }
+    .table-wrap { overflow: visible; }
+    table { min-width: 0; font-size: 10.5px; }
+    thead th, tbody td { padding: 7px 8px; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand">
+      <span class="bar"></span>
+      <div>
+        <h1>实时客流大屏 · 分工与依赖看板</h1>
+        <div class="sub">METRO FLOW · TASK &amp; DEPENDENCY BOARD</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="pill"><span class="dot"></span>2026-11-17</span>
+      <span class="pill">4 人组</span>
+      <span class="pill">契约 v1.3 草案</span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="stat ok">
+      <div class="k">模块并行</div>
+      <div class="v">4<small>个</small></div>
+      <div class="foot">采集 / 计算 / 服务 / 前端</div>
+    </div>
+    <div class="stat">
+      <div class="k">交付切片</div>
+      <div class="v">3<small>条</small></div>
+      <div class="foot">Slice 0 先行，Slice 1 加契约，Slice 2 增强</div>
+    </div>
+    <div class="stat violet">
+      <div class="k">前端阻塞</div>
+      <div class="v">0<small>项</small></div>
+      <div class="foot">Slice 0 不依赖后端新代码</div>
+    </div>
+    <div class="stat warn">
+      <div class="k">契约变更</div>
+      <div class="v">v1.3<small>加法</small></div>
+      <div class="foot">只加字段/参数，不删不改义</div>
+    </div>
+  </div>
+
+  <section id="roles">
+    <div class="section-head">
+      <h2>角色与任务</h2>
+      <span class="hint">按仓库实际分工；如按责任矩阵 4 人方案，服务可并给队长</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>角色 / 负责人</th>
+            <th>本迭代任务</th>
+            <th>交付物</th>
+            <th>前端依赖</th>
+            <th>开始条件</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>采集</strong><span class="small">lin07141 · <code>simulator/</code></span></td>
+            <td>站点/线路元数据补名称、顺序、坐标；模拟器支持速率、场景、历史回填；保持消息 6 字段不变。</td>
+            <td><code>stations.json</code> / 线路元数据、backfill 能力、采集测试。</td>
+            <td>站点中文名、线网坐标、可查的历史数据。</td>
+            <td>无。可立即开始。</td>
+          </tr>
+          <tr>
+            <td><strong>计算</strong><span class="small">xiaoqu6666 · <code>stream/</code></span></td>
+            <td>1 秒窗口增加进/出站计数；<code>metric_window</code> 增加进/出列；分钟/小时聚合；今日累计；迟到策略；补测试。</td>
+            <td>指标与消费者改动、迁移配合、口径测试、对账结果。</td>
+            <td><code>in/out</code> 数据、今日累计、分线汇总。</td>
+            <td>契约 v1.3 字段确认；表结构变更先提 issue。</td>
+          </tr>
+          <tr>
+            <td><strong>服务</strong><span class="small">kunkunkun-ux · <code>api/</code> + <code>config/</code></span></td>
+            <td>契约 v1.3；<code>/api/series</code>、<code>/api/rank</code> 扩参；新增 <code>/api/summary/today</code>、<code>/api/stations</code>；校验、缓存、降级、测试。</td>
+            <td>接口实现、契约文档、错误码、契约测试。</td>
+            <td>真实接口、错误/降级语义、mock 对照。</td>
+          </tr>
+          <tr>
+            <td><strong>前端</strong><span class="small">Xuzhaopu04 · <code>web/</code></span></td>
+            <td>Slice 0 查询页；Slice 1 进/出站与今日累计；状态设计；CSV；响应式；联调与截图。</td>
+            <td><code>/query</code> 页面、交互说明、截图、手工用例。</td>
+            <td>—</td>
+            <td>Slice 0 立即开始；Slice 1 等契约 + mock，不等后端全部完成。</td>
+          </tr>
+          <tr>
+            <td><strong>文档 / 测试</strong><span class="small">队长 + 全员</span></td>
+            <td>维护用户故事 US-10/11/12、用例 UC-11/12、指标口径、UML；补集成与性能测试；PR review；AI 记录。</td>
+            <td>契约变更记录、测试方案、集成用例、演示脚本、报告素材。</td>
+            <td>变更说明、验收标准、回归结论。</td>
+            <td>与 Slice 1 同步启动；不阻塞前端。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="slices">
+    <div class="section-head">
+      <h2>三条交付切片</h2>
+      <span class="hint">每条都能单独演示，不搞大爆炸</span>
+    </div>
+    <div class="slices">
+      <div class="slice s0">
+        <div class="no">Slice 0 · P0</div>
+        <h3>把“查看客流”先做完整</h3>
+        <p class="goal">不改契约，靠已有接口把 US-10 做透，先解决“没什么用”。</p>
+        <ul>
+          <li>查询页骨架 + 时间范围 1—60 分钟</li>
+          <li>站点选择、多站对比、线路汇总</li>
+          <li>表格、CSV、暂停刷新、URL 状态</li>
+          <li>乘降量/进站/出站标签修正</li>
+          <li>加载 / 空 / 错误 / 断线四种状态</li>
+        </ul>
+        <div class="foot">负责：前端为主；采集补 backfill 供演示。后端零改动。</div>
+      </div>
+      <div class="slice s1">
+        <div class="no">Slice 1 · P1</div>
+        <h3>契约 v1.3：进/出站与今日累计</h3>
+        <p class="goal">只做加法，让“客流”有运营含义，能回答今天和方向。</p>
+        <ul>
+          <li>计算：in/out 计数、落库、今日累计、对账</li>
+          <li>服务：series/rank 扩参、summary、stations</li>
+          <li>前端：方向切换、双序列、今日卡片、峰值</li>
+          <li>测试：新旧契约兼容、边界、降级</li>
+        </ul>
+        <div class="foot">负责：计算 + 服务 + 前端 + 测试同步；契约边界冻结后不再改字段。</div>
+      </div>
+      <div class="slice s2">
+        <div class="no">Slice 2 · P2</div>
+        <h3>增强，有余量再做</h3>
+        <p class="goal">不阻塞主交付，避免为了“功能多”牺牲稳定性。</p>
+        <ul>
+          <li>告警历史与持续时长</li>
+          <li>SSE / WebSocket 推送替代轮询</li>
+          <li>更多对比维度与导出模板</li>
+        </ul>
+        <div class="foot">负责：按剩余时间排；不做 OD、预测、复杂地图。</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="frontend">
+    <div class="section-head">
+      <h2>前端工作分解（WBS）</h2>
+      <span class="hint">以“可演示”为完成标准，不以“代码写完”为标准</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>任务</th>
+            <th>依赖</th>
+            <th>完成标准</th>
+            <th>优先级</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>契约评审 + mock fixtures</strong><span class="small">把 v1.3 的正常/空/降级/错误响应写成 JSON</span></td>
+            <td>v1.3 草案</td>
+            <td>5 种状态都有 mock；字段名与契约逐字一致</td>
+            <td><span class="tag p0">P0</span></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong><code>/query</code> 页面骨架</strong><span class="small">筛选区、图表区、表格区、状态区</span></td>
+            <td>无</td>
+            <td>路由可打开；1920/1366 不横向滚动</td>
+            <td><span class="tag p0">P0</span></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>时间范围 + 站点选择 + 表格 + CSV</strong><span class="small">用已有 <code>/api/series</code></span></td>
+            <td>已有接口</td>
+            <td>1/5/30/60 分钟可切；单站/全部可查；CSV 有表头</td>
+            <td><span class="tag p0">P0</span></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>多站对比 + 线路汇总</strong><span class="small">并行请求，前端合并；最多 4 条线</span></td>
+            <td>已有接口</td>
+            <td>图例、颜色、tooltip 不错位；站点可增删</td>
+            <td><span class="tag p1">P1</span></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>进/出站切换 + 双序列</strong><span class="small">先 mock，后切真实接口</span></td>
+            <td>v1.3 mock</td>
+            <td><code>in + out = total</code>；图例与数值一致</td>
+            <td><span class="tag p1">P1</span></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>今日累计卡片</strong><span class="small">乘降量、进站、出站、净流入、峰值</span></td>
+            <td>summary mock</td>
+            <td>统计起点写清楚；无数据不显示 0 冒充</td>
+            <td><span class="tag p1">P1</span></td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><strong>状态与降级</strong><span class="small">loading / empty / error / degraded / stale</span></td>
+            <td>错误语义</td>
+            <td>每种状态都有文案和下一步操作；不白屏</td>
+            <td><span class="tag p0">P0</span></td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><strong>响应式、打印、键盘</strong><span class="small">值班室大屏 + 笔记本 + 打印</span></td>
+            <td>无</td>
+            <td>三档宽度可用；Esc 关抽屉；打印不截断表格</td>
+            <td><span class="tag p2">P2</span></td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><strong>联调 + 截图 + 交互说明</strong><span class="small">给报告和答辩用</span></td>
+            <td>真实接口</td>
+            <td>关键路径截图；说明“为什么这么设计”</td>
+            <td><span class="tag p0">P0</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="contract">
+    <div class="section-head">
+      <h2>契约 v1.3 加法清单</h2>
+      <span class="hint">只加不删；旧字段、旧参数、旧测试必须继续通过</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>接口 / 存储</th>
+            <th>变更</th>
+            <th>兼容策略</th>
+            <th>谁写 / 谁读</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/api/series</code></td>
+            <td>新增 <code>line_id</code>、<code>direction</code>、<code>granularity</code>、<code>from/to</code>；点结构增加 <code>in/out/total</code>。</td>
+            <td>保留 <code>minutes</code> / <code>station_id</code>；默认行为不变；最大点数 2000。</td>
+            <td>服务写 / 前端读</td>
+          </tr>
+          <tr>
+            <td><code>/api/rank</code></td>
+            <td>新增 <code>minutes</code>、<code>line_id</code>、<code>direction</code>。</td>
+            <td>默认仍为最近 5 分钟；旧调用不传参不受影响。</td>
+            <td>服务写 / 前端读</td>
+          </tr>
+          <tr>
+            <td><code>/api/summary/today</code></td>
+            <td>新增接口：今日累计、进/出、峰值、分线/分站 TopN、数据质量、更新时间。</td>
+            <td>全新接口，不影响旧接口；必须注明统计起点。</td>
+            <td>服务写 / 前端读</td>
+          </tr>
+          <tr>
+            <td><code>/api/stations</code></td>
+            <td>新增接口：站点名称、线路、顺序、坐标、颜色。</td>
+            <td>只读采集的 <code>stations.json</code>，不复制数据。</td>
+            <td>服务写 / 前端读</td>
+          </tr>
+          <tr>
+            <td><code>metric_window</code></td>
+            <td>新增 <code>in_passengers</code>、<code>out_passengers</code> 两列。</td>
+            <td>可空/默认 0；先迁移、再双写、后切读；<code>(ts, station_id)</code> 唯一不变。</td>
+            <td>计算写 / 服务读</td>
+          </tr>
+          <tr>
+            <td>消息格式</td>
+            <td><strong>不变</strong>；现有 <code>event_type</code> 已能区分进/出站。</td>
+            <td>不动 <code>gate_events</code>，采集和计算不需要改消息契约。</td>
+            <td>采集写 / 计算读</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn"><strong>口径提醒：</strong>当前 <code>total</code> 是“进站 + 出站”的乘降量，不是去重客流。一个乘客进站、出站会被计两次。页面必须写清“乘降量 / 进站量 / 出站量 / 净流入”，不要笼统叫“客流”。数据里没有 <code>card_id</code> / <code>trip_id</code>，本期不做 OD 和断面。</div>
+  </section>
+
+  <section id="checklist">
+    <div class="section-head">
+      <h2>联调与验收清单</h2>
+      <span class="hint">Definition of Done：代码 + 测试 + 文档 + 演示 + AI 记录</span>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <h3>前端交付前</h3>
+        <ul class="checklist">
+          <li>v1.3 字段冻结，变更记录已写</li>
+          <li>mock 覆盖正常 / 空 / 降级 / 错误 / 过期</li>
+          <li>旧 <code>pytest</code> 全绿，新契约测试全绿</li>
+          <li><code>in + out = total</code> 有页面级校验</li>
+          <li>60 分钟 1 秒、24 小时 1 分钟不卡</li>
+          <li>CSV 可导出，URL 可复现查询</li>
+          <li>关键路径截图 + 交互说明</li>
+          <li>AI 使用记录当天补</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>主要风险与应对</h3>
+        <ul class="clean">
+          <li><strong>后端延迟：</strong>先发 Slice 0，不阻塞演示；Slice 1 用 mock 顶住。</li>
+          <li><strong>契约反复：</strong>Sprint 边界冻结；mock 确定后不再改字段名。</li>
+          <li><strong>历史数据不足：</strong>采集补 backfill，否则查询页没东西可查。</li>
+          <li><strong>口径误解：</strong>页面固定写“乘降量”，不要只写“客流”。</li>
+          <li><strong>数据库不可用：</strong>沿用现有降级模式，返回空结构 200，不白屏。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>依据：<code>docs/01-需求/用户故事地图.md</code> · <code>docs/02-设计/接口契约.md</code> · <code>docs/05-管理/分工与责任矩阵.md</code> · <code>docs/05-管理/迭代计划.md</code></span>
+    <span>内部协作看板 · 可直接打印</span>
+  </footer>
+</div>
+</body>
+</html>
