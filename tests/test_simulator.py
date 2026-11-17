@@ -28,22 +28,27 @@ class FakeRedis:
 # ---------- 1. 事件生成 ----------
 
 def test_stations_carry_display_metadata():
-    """站点要带中文名、线序、坐标，供 /api/stations 和前端展示。"""
+    """站点要带中文名、线序、经纬度，字段名与契约 4.5 一致。"""
     for station_id, station in sim.STATIONS.items():
         assert station["name"], station_id
-        assert station["line_id"] in sim.LINES, station_id
+        assert station["line_id"], station_id
+        assert station["line_name"], station_id
+        assert station["color"].startswith("#"), station_id
         assert isinstance(station["order"], int), station_id
-        assert isinstance(station["x"], (int, float)), station_id
-        assert isinstance(station["y"], (int, float)), station_id
+        assert isinstance(station["lng"], (int, float)), station_id
+        assert isinstance(station["lat"], (int, float)), station_id
         assert 0 <= station["weight"] <= 1, station_id
 
 
-def test_lines_carry_display_metadata():
-    """线路要带名称、颜色、线序。"""
-    for line_id, line in sim.LINES.items():
-        assert line["name"], line_id
-        assert line["color"].startswith("#"), line_id
-        assert isinstance(line["order"], int), line_id
+def test_stations_on_same_line_share_line_metadata():
+    """同一线路的 line_name 与 color 必须一致，否则 /api/stations 归并出矛盾结果。"""
+    seen = {}
+    for station in sim.STATIONS.values():
+        key = station["line_id"]
+        if key in seen:
+            assert seen[key] == (station["line_name"], station["color"]), key
+        else:
+            seen[key] = (station["line_name"], station["color"])
 
 
 def test_make_event_has_all_contract_fields():
