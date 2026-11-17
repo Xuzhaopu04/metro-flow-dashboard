@@ -36,20 +36,16 @@ EVENT_STREAM = os.environ.get("EVENT_STREAM", "gate_events")
 STREAM_MAXLEN = 100000
 
 # 站点表外置到 stations.json，改站点不碰代码；A 线是主干线，权重比 B 线高
+# 结构直接对应契约 4.5：顶层是 station_id，服务端每次原样读取，不要再包一层
 _STATIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "stations.json")
 try:
     with open(_STATIONS_FILE, encoding="utf-8") as _fp:
-        _NETWORK = json.load(_fp)
-    STATIONS = _NETWORK["stations"]
-    LINES = _NETWORK["lines"]
+        STATIONS = json.load(_fp)
 except FileNotFoundError:
     print(f"找不到站点配置文件 {_STATIONS_FILE}，请确认文件存在")
     sys.exit(1)
 except json.JSONDecodeError as exc:
     print(f"站点配置文件 {_STATIONS_FILE} 格式错误：{exc}")
-    sys.exit(1)
-except KeyError as exc:
-    print(f"站点配置文件缺少 {exc} 段，应为 lines + stations 两段")
     sys.exit(1)
 
 # 早高峰进站多，晚高峰出站多，平时各半

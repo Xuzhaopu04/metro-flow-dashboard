@@ -1,14 +1,8 @@
 {
-  "lines": {
-    "L1": {"name": "1号线", "color": "#2F6BFF", "order": 1},
-    "L2": {"name": "2号线", "color": "#8B5CF6", "order": 2}
-  },
-  "stations": {
-    "A01": {"name": "人民广场", "line_id": "L1", "order": 1, "x": 140, "y": 180, "weight": 0.24},
-    "A02": {"name": "南京东路", "line_id": "L1", "order": 2, "x": 400, "y": 180, "weight": 0.18},
-    "A03": {"name": "陆家嘴", "line_id": "L1", "order": 3, "x": 660, "y": 180, "weight": 0.12},
-    "B01": {"name": "中山公园", "line_id": "L2", "order": 1, "x": 240, "y": 420, "weight": 0.16},
-    "B02": {"name": "徐家汇", "line_id": "L2", "order": 2, "x": 500, "y": 420, "weight": 0.10},
-    "B03": {"name": "世纪大道", "line_id": "L2", "order": 3, "x": 760, "y": 420, "weight": 0.20}
-  }
+  "A01": {"line_id": "L1", "line_name": "1号线", "color": "#2F6BFF", "name": "人民广场", "order": 1, "lng": 121.4752, "lat": 31.2304, "weight": 0.24},
+  "A02": {"line_id": "L1", "line_name": "1号线", "color": "#2F6BFF", "name": "南京东路", "order": 2, "lng": 121.4844, "lat": 31.2375, "weight": 0.18},
+  "A03": {"line_id": "L1", "line_name": "1号线", "color": "#2F6BFF", "name": "陆家嘴", "order": 3, "lng": 121.5057, "lat": 31.2397, "weight": 0.12},
+  "B01": {"line_id": "L2", "line_name": "2号线", "color": "#8B5CF6", "name": "中山公园", "order": 1, "lng": 121.4155, "lat": 31.2212, "weight": 0.16},
+  "B02": {"line_id": "L2", "line_name": "2号线", "color": "#8B5CF6", "name": "徐家汇", "order": 2, "lng": 121.4374, "lat": 31.1953, "weight": 0.10},
+  "B03": {"line_id": "L2", "line_name": "2号线", "color": "#8B5CF6", "name": "世纪大道", "order": 3, "lng": 121.5340, "lat": 31.2350, "weight": 0.20}
 }
