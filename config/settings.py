@@ -74,3 +74,8 @@ WINDOW_SECONDS = int(os.environ.get("WINDOW_SECONDS", "1"))
 SNAPSHOT_TTL = int(os.environ.get("SNAPSHOT_TTL", "5"))
 # 迟到容差：事件时间早于当前窗口 2 个窗口以上就算迟到
 LATE_TOLERANCE_WINDOWS = int(os.environ.get("LATE_TOLERANCE_WINDOWS", "2"))
+
+# 告警阈值：单窗口全网客流达到或超过该值即触发告警。
+# 默认 100 与 README 的"单窗口超过 100 人次"一致；放环境变量是为了演示时能快速压低取值，
+# 不必改代码。判定在服务端做（责任矩阵接口点 ④"谁写=服务"），前端只读结果。
+ALERT_THRESHOLD = int(os.environ.get("ALERT_THRESHOLD", "100"))
