@@ -13,6 +13,10 @@
 | 2026-11-13 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 编码 | 大屏信息增强：新增 SVG 线网客流图、柱子较上一秒增减标签（散点承载涨跌双色）、排行点击下钻并联动柱状图高亮与单站趋势、迟到/非法合并为数据健康卡并附 60 秒火花线、告警条补持续时长与峰值、页面宽度随视口自适应；全程只用契约 v1.2 已有字段，未改 api/ | 人工复核后定稿：先让 AI 出浅色/霓虹/极简三套风格备选，看图后否决，要求回到原深色方案；核对线网图与柱状图取同一份快照、下钻复用 /api/series 的 station_id 参数、空数据与断线不白屏；pytest 58 passed、manage.py check 无 issue、1920×1080 渲染确认无溢出 | 部分采纳（三套风格备选否决，其余直接采用） |
 | 2026-11-16 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 编码 | 大屏增加默认收起的「帮助」抽屉：指标口径与适用边界、异常现象对照表加四步处置、FAQ 与三个接口入口；首屏只多一个按钮，不动数据逻辑 | 人工判断首版 5 个标签过重，要求精简为 3 个：删掉角色速查、三场景段、链路节点卡、页面地图、命令表与 2 条重复 FAQ，口径表由 4 列 7 行压为 2 列 5 行；净增行数从 272 降到 161；复核 pytest 58 passed、check 无 issue、三个标签页渲染正常 | 部分采纳（结构与内容经一轮删减） |
 | 2026-11-17 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 编码 | 大屏视觉改版：按 ui 参考稿把深色主题换成浅灰底 + 白卡片，重写样式表；KPI 改衬线大数字与圆点标签，柱状/趋势/线网图同步换色，切换控件改胶囊分段，帮助抽屉改白底下划线标签页 | 人工提供 `task/ui` 下五张参考图并要求按此风格改，否决了继续沿用深色方案；复核时发现 2 列布局下线网图被 SVG 固有高度撑满整屏，要求修掉（改为绝对定位 + 固定高度）；pytest 58 passed、check 无 issue、1920 与 1440 两种宽度渲染确认；随后起真实链路（MySQL/Redis/消费者/模拟器）看过实际效果 | 直接采用（含一处布局缺陷修复） |
+| 2026-11-17 | 兰天 | TraeCode | 编码 | 契约 v1.3 Slice 1：metric_window 加 in_passengers/out_passengers 两列，aggregate_window 按 event_type 拆分进/出聚合，consumer 双写落库，补 4 个 v1.3 测试 | 人工核对口径：passengers = in + out 一致性、缺 event_type 按进站兜底、只加不删（旧字段旧测试全保留）；pytest 62 passed、check 无 issue | 直接采用 |
+| 2026-11-17 | 兰天 | TraeCode | 编码 | 解决采集 backfill 阻塞点：consumer 加 --replay 开关跳过迟到判定（方案 D）；采集队友反馈后修复——按 event_time 分桶逐窗落库、replay 不写 SNAPSHOT_KEY | 否决方案 A（放宽 late_threshold=2s 会污染实时口径，且阈值是指标口径 §4 定的，改它要先改文档）；首版只加 ignore_late，未解决 ts 堆 now 和写快照冲大屏，按队友反馈把 run_window 拆出 replay 路径重写；pytest 64→67 passed | 部分采纳（首版缺分桶与快照规避，经队友反馈修正） |
+| 2026-11-17 | 兰天 | TraeCode | 编码 | 与 feat/contract-v1.3 撞车去重：撤销本分支 api/models.py 改动、删除重复的 0002 进/出列 migration | 用户拍板"不改队友内容、撤自己重复改动"；进/出列与 migration 的归属让给服务端，本分支只留 stream/ 与测试；pytest 67 passed、api/ diff 清空 | 直接采用 |
+| 2026-11-17 | 兰天 | TraeCode | 文档 | 写 PR #17 评论：说明撞车已解决 + replay 修复内容与用法，经 gh CLI 发出 | 人工核对 diff --stat 与测试结果后定稿 | 直接采用 |
 
 ## 填写说明
 
@@ -55,3 +59,12 @@
   结论：风格比选只作参考，不替换原方案。
 - 帮助抽屉首版：5 个标签 + 角色速查 + 链路节点卡 + 页面地图 + 命令表 + 6 条 FAQ，
   信息密度过高、与首屏职责重复，否决，压成 3 个标签、2 张表、4 条 FAQ。
+
+被否决的方案（2026-11-17，编码环节）：
+
+- 放宽 late_threshold（把 2 秒迟到容忍改成更长/无限）来解决采集 backfill 的迟到丢弃：
+  会让实时流里的脏数据也进库、污染查询页口径，且阈值是指标口径 §4 定死的，改它要先改文档。
+  否决。改用方案 D——consumer 加 --replay 开关，正常模式口径不变，replay 模式才跳过迟到判定。
+- replay 首版实现：只给 aggregate_window 加 ignore_late 跳过迟到判定，但 window_start 仍取 now、
+  且 replay 也写 SNAPSHOT_KEY。采集队友反馈"ts 全堆在现在、大屏会被冲掉"后否决，
+  重写为按 event_time 分桶逐窗落库 + replay 不写快照。
