@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>实时客流监测大屏</title>
+  <title>实时客流监测与查询大屏</title>
   <!-- 用 npmmirror 而不是 jsdelivr：jsdelivr 在国内经常只有几 KB/s，Vue/ECharts 加载不出来页面就只剩文字 -->
   <script src="https://registry.npmmirror.com/vue/3.5.13/files/dist/vue.global.prod.js"></script>
   <script src="https://registry.npmmirror.com/echarts/5.5.1/files/dist/echarts.min.js"></script>
@@ -32,7 +32,7 @@
                           background: repeating-linear-gradient(180deg, #fff 0 3px, transparent 3px 7px); }
     .brand h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -.2px; }
     .brand .sub { font-size: 9.5px; letter-spacing: 2.2px; color: var(--faint); margin-top: 4px; text-transform: uppercase; }
-    .head-right { display: flex; align-items: center; gap: 8px; }
+    .head-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .clock { font-size: 13px; color: #6b7280; font-variant-numeric: tabular-nums; margin-right: 4px; }
     .pill { display: inline-flex; align-items: center; font-size: 12px; color: #5f6570;
             border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: #fff; }
@@ -212,7 +212,75 @@
     .faq details[open] summary::before { content: "−"; }
     .faq p { margin: 8px 0 2px 16px; font-size: 12px; color: var(--muted); line-height: 1.75; }
 
-    #kpi, #flow, #bars, #rank, #trend { scroll-margin-top: 12px; }
+    /* ---- 客流查询：与实时监看共用浅色语言，但把“查”与“看”分开 ---- */
+    .view-switch { margin-right: 2px; }
+    .view-switch .tab { padding: 5px 12px; }
+    .query-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                      gap: 16px; margin-top: 18px; }
+    .control > label { display: block; font-size: 11px; color: var(--faint);
+                       letter-spacing: .04em; margin-bottom: 7px; }
+    .control .toolbar { justify-content: flex-start; }
+    .station-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+    .query-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                     gap: 10px; margin-top: 18px; padding: 14px 16px;
+                     background: #fbfbfa; border: 1px solid var(--line-soft); border-radius: 12px; }
+    .summary-item span { display: block; font-size: 11px; color: var(--faint); }
+    .summary-item b { font-family: var(--num); font-size: 24px; font-weight: 500;
+                      font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .summary-item small { font-size: 11px; color: var(--faint); margin-left: 4px; }
+    .query-chart { height: 360px; }
+    .table-head { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+    .table-head h3 { margin: 0; font-size: 13px; font-weight: 600; }
+    .table-head .hint { margin-left: auto; }
+    .data-wrap { margin-top: 8px; max-height: 300px; overflow: auto;
+                 border: 1px solid var(--line-soft); border-radius: 12px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.data th { position: sticky; top: 0; background: #fbfbfa; text-align: left;
+                    font-weight: 500; color: var(--faint); font-size: 11px;
+                    padding: 8px 12px; border-bottom: 1px solid var(--line); }
+    table.data td { padding: 8px 12px; border-bottom: 1px solid var(--line-soft);
+                    color: #4b5563; font-variant-numeric: tabular-nums; }
+    table.data tr:last-child td { border-bottom: none; }
+    .query-note { font-size: 11.5px; color: var(--faint); margin-top: 10px; line-height: 1.7; }
+    .callout { margin-top: 14px; padding: 11px 14px; border-radius: 10px; font-size: 12px;
+               line-height: 1.7; border-left: 3px solid var(--accent);
+               background: var(--accent-soft); color: #2b3f6b; }
+    .callout.warn { border-left-color: var(--warn); background: #fffaeb; color: #7a5a12; }
+    .today-card { margin-top: 18px; padding: 16px 18px; border: 1px solid var(--line-soft);
+                  border-radius: 14px; background: #fbfbfa; }
+    .today-head { display: flex; align-items: flex-start; justify-content: space-between;
+                  gap: 12px; flex-wrap: wrap; }
+    .today-head h3 { margin: 0; font-size: 13.5px; font-weight: 650; }
+    .today-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+                  margin-top: 12px; padding: 0; background: transparent; border: none; }
+    .today-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                   gap: 18px; margin-top: 14px; padding-top: 12px;
+                   border-top: 1px solid var(--line-soft); }
+    .today-split h4 { margin: 0 0 8px; font-size: 11px; color: var(--faint);
+                      font-weight: 500; letter-spacing: .04em; }
+    .mini-list { list-style: none; margin: 0; padding: 0; }
+    .mini-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto;
+                    gap: 3px 10px; padding: 6px 0; border-bottom: 1px solid var(--line-soft);
+                    font-size: 12px; }
+    .mini-list li:last-child { border-bottom: none; }
+    .mini-list span { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mini-list b { font-family: var(--num); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .mini-list small { grid-column: 1 / -1; color: var(--faint); font-size: 10.5px; }
+    .mini-list li.muted { display: block; color: var(--faint); }
+    .query-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px;
+                         gap: 16px; margin-top: 10px; }
+    .query-rank { border-left: 1px solid var(--line-soft); padding-left: 16px; }
+    .query-rank ol.rank li { cursor: default; }
+    .query-rank .rank-foot { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line-soft);
+                             font-size: 11px; color: var(--faint); line-height: 1.7; }
+    @media (max-width: 1080px) {
+      .query-chart { height: 300px; }
+      .query-detail-grid { grid-template-columns: 1fr; }
+      .query-rank { border-left: none; border-top: 1px solid var(--line-soft);
+                    padding-left: 0; padding-top: 12px; }
+    }
+
+    #kpi, #flow, #bars, #rank, #trend, #query { scroll-margin-top: 12px; }
   </style>
 </head>
 <body>
@@ -223,21 +291,28 @@
     <div class="brand">
       <span class="bar"></span>
       <div>
-        <h1>实时客流监测</h1>
+        <h1>实时客流监测与查询</h1>
         <div class="sub">METRO FLOW DASHBOARD</div>
       </div>
     </div>
     <div class="head-right">
       <span class="clock">{{ clock }}</span>
       <span class="pill"><span class="dot" :class="online ? 'ok' : 'bad'"></span>{{ online ? '实时连接' : '连接中断，正在重试' }}</span>
+      <div class="toolbar view-switch" role="tablist" aria-label="页面视图">
+        <button class="tab" :class="{ on: view === 'live' }" @click="switchView('live')">实时监看</button>
+        <button class="tab" :class="{ on: view === 'query' }" @click="switchView('query')">客流查询</button>
+      </div>
       <button class="pill btn" @click="openHelp('metric')" title="指标口径、异常处置与常见问题">帮助</button>
     </div>
   </header>
 
+  <!-- 实时监看：原有大屏逻辑不动，查询页作为同一页面的第二个视图 -->
+  <div v-show="view === 'live'">
   <div class="kpis" id="kpi">
     <div class="kpi accent" :class="{ alerting: alerting }">
-      <div class="k">实时客流</div>
+      <div class="k">当前秒乘降量</div>
       <div class="v">{{ total }}<small>人次/秒</small></div>
+      <div class="foot">进站 + 出站，暂未拆分</div>
     </div>
     <div class="kpi">
       <div class="k">活跃站点</div>
@@ -272,7 +347,7 @@
   <div class="grid">
     <section class="card flow-card" id="flow">
       <div class="card-head">
-        <h2>线网客流分布</h2>
+        <h2>线网乘降量分布</h2>
         <span class="hint">圆面积对应客流</span>
       </div>
       <div class="flow-wrap">
@@ -298,7 +373,7 @@
     <section class="card" id="bars">
       <div class="card-head">
         <div>
-          <h2>各站实时客流</h2>
+          <h2>各站当前秒乘降量</h2>
           <div class="legend" v-if="line === 'all'">
             <span><i style="background:#2f6bff"></i>1 号线</span>
             <span><i style="background:#8b5cf6"></i>2 号线</span>
@@ -319,7 +394,7 @@
 
     <aside class="card rank-card" id="rank">
       <div class="card-head">
-        <h2>近 5 分钟客流排行</h2>
+        <h2>近 5 分钟乘降量排行</h2>
         <span class="hint">TOP 5 · 点击看单站</span>
       </div>
       <ol class="rank">
@@ -328,7 +403,7 @@
             @click="pickStation(item.station_id)">
           <span class="badge" :class="'top' + (index + 1)">{{ index + 1 }}</span>
           <div class="rank-main">
-            <span class="rank-name">{{ item.station_id }}</span>
+            <span class="rank-name">{{ stationLabel(item.station_id) }}</span>
             <div class="rank-bar"><span :style="{ width: barWidth(item.passengers) }"></span></div>
           </div>
           <span class="rank-num">{{ item.passengers }}</span>
@@ -336,8 +411,8 @@
         <li class="rank-empty" v-if="!rank.length">暂无数据</li>
       </ol>
       <div class="rank-foot">
-        按最近 5 分钟累计客流排序<br>排行与趋势每 5 秒刷新<br>
-        <span v-if="selected">已选 {{ selected }}，趋势图同步切换</span>
+        按最近 5 分钟累计乘降量排序<br>排行与趋势每 5 秒刷新<br>
+        <span v-if="selected">已选 {{ stationLabel(selected) }}，趋势图同步切换</span>
         <span v-else>点击某站可下钻到单站趋势</span>
       </div>
     </aside>
@@ -345,8 +420,8 @@
 
   <section class="card" id="trend" style="margin-top: 16px">
     <div class="card-head">
-      <h2>近 5 分钟客流趋势
-        <span class="hint" style="margin-left: 12px">虚线为告警阈值 · 当前 {{ selected || '全部站点' }}</span>
+      <h2>近 5 分钟乘降量趋势
+        <span class="hint" style="margin-left: 12px">虚线为告警阈值 · 当前 {{ selected ? stationLabel(selected) : '全部站点' }}</span>
       </h2>
       <div class="toolbar">
         <button v-for="opt in stationOptions" :key="opt.value"
@@ -365,6 +440,189 @@
     <span class="fresh" :class="freshLevel">{{ freshText }}</span>
     <span>窗口 1 秒 · 趋势回溯 5 分钟 · 排行统计最近 5 分钟</span>
   </footer>
+  </div>
+
+  <!-- 客流查询：消费契约 v1.3 的方向/粒度/今日汇总；进/出站为 null 时如实显示“—” -->
+  <section class="card query-page" v-show="view === 'query'" id="query">
+    <div class="card-head">
+      <div>
+        <h2>客流查询</h2>
+        <div class="hint">按线路、站点、方向和时间范围查询；接口没有的方向数据不拿合计顶替</div>
+      </div>
+      <div class="toolbar">
+        <button class="tab" :class="{ on: autoRefresh }" @click="toggleAutoRefresh">
+          {{ autoRefresh ? '自动刷新 开' : '自动刷新 关' }}
+        </button>
+        <button class="tab" @click="refreshAll" :disabled="queryLoading || summaryLoading">
+          {{ queryLoading || summaryLoading ? '加载中…' : '刷新' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="today-card" v-if="summary">
+      <div class="today-head">
+        <div>
+          <h3>今日汇总</h3>
+          <div class="hint">统计起点 {{ summary.since.slice(0, 16).replace('T', ' ') }} · 更新 {{ summary.updated_at.slice(11, 19) }}</div>
+        </div>
+        <span class="pill">全部方向</span>
+      </div>
+      <div class="query-summary today-grid">
+        <div class="summary-item"><span>今日乘降量</span><b>{{ fmtNumber(summary.total) }}</b><small>人次</small></div>
+        <div class="summary-item"><span>进站</span><b>{{ fmtNumber(summary.in) }}</b><small>人次</small></div>
+        <div class="summary-item"><span>出站</span><b>{{ fmtNumber(summary.out) }}</b><small>人次</small></div>
+        <div class="summary-item"><span>净流入</span><b>{{ fmtNumber(summary.net) }}</b><small>人次</small></div>
+        <div class="summary-item"><span>今日峰值</span><b>{{ fmtNumber(summary.peak.total) }}</b><small>{{ summary.peak.ts ? summary.peak.ts.slice(11, 19) : '—' }}</small></div>
+        <div class="summary-item"><span>数据质量</span><b>{{ fmtNumber(summary.quality.late_count) }}<small>迟到</small> · {{ fmtNumber(summary.quality.invalid_count) }}<small>非法</small></b></div>
+      </div>
+      <div class="today-split">
+        <div>
+          <h4>分线</h4>
+          <ul class="mini-list">
+            <li v-for="line in summary.lines" :key="line.line_id">
+              <span>{{ lineLabel(line.line_id) }}</span>
+              <b>{{ fmtNumber(line.total) }}</b>
+              <small>进 {{ fmtNumber(line.in) }} · 出 {{ fmtNumber(line.out) }}</small>
+            </li>
+            <li v-if="!summary.lines.length" class="muted">暂无分线数据</li>
+          </ul>
+        </div>
+        <div>
+          <h4>今日 Top 5</h4>
+          <ul class="mini-list">
+            <li v-for="(item, index) in summary.top_stations" :key="item.station_id">
+              <span>{{ index + 1 }}. {{ stationLabel(item.station_id) }}</span>
+              <b>{{ fmtNumber(item.total) }}</b>
+              <small>进 {{ fmtNumber(item.in) }} · 出 {{ fmtNumber(item.out) }}</small>
+            </li>
+            <li v-if="!summary.top_stations.length" class="muted">暂无排行数据</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="query-note" v-else-if="summaryLoading">正在加载今日汇总…</div>
+    <div class="query-note" v-else-if="summaryError">{{ summaryError }}</div>
+
+    <div class="query-controls">
+      <div class="control">
+        <label>时间范围</label>
+        <div class="toolbar">
+          <button class="tab" :class="{ on: rangeMode === 'today' }" @click="setRangeMode('today')">今日</button>
+          <button v-for="m in minuteOptions" :key="m" class="tab"
+                  :class="{ on: rangeMode === 'minutes' && minutes === m }"
+                  @click="setMinutes(m)">{{ m }} 分钟</button>
+        </div>
+      </div>
+      <div class="control">
+        <label>粒度</label>
+        <div class="toolbar">
+          <button v-for="opt in granularityOptions" :key="opt.value" class="tab"
+                  :class="{ on: granularity === opt.value }"
+                  @click="setGranularity(opt.value)">{{ opt.label }}</button>
+        </div>
+      </div>
+      <div class="control">
+        <label>线路</label>
+        <div class="toolbar">
+          <button v-for="opt in lineOptions" :key="opt.value" class="tab"
+                  :class="{ on: selectedLine === opt.value }"
+                  @click="setLine(opt.value)">{{ opt.label }}</button>
+        </div>
+      </div>
+      <div class="control">
+        <label>站点（最多 4 个，不选=全部）</label>
+        <div class="station-picker">
+          <button class="tab" :class="{ on: !selectedStations.length }" @click="selectAllStations">全部</button>
+          <button v-for="s in stationList" :key="s.station_id" class="tab"
+                  :class="{ on: selectedStations.includes(s.station_id) }"
+                  @click="toggleStation(s.station_id)">{{ stationLabel(s.station_id) }}</button>
+        </div>
+      </div>
+      <div class="control">
+        <label>方向</label>
+        <div class="toolbar">
+          <button v-for="opt in directionOptions" :key="opt.value" class="tab"
+                  :class="{ on: direction === opt.value }"
+                  @click="setDirection(opt.value)">{{ opt.label }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn" v-if="directionUnknown">
+      进/出站数据尚未就绪：接口按契约返回 null，页面显示“—”，不拿合计顶替。等计算端双写 in/out 后自动出现。
+    </div>
+
+    <div class="query-summary">
+      <div class="summary-item"><span>{{ queryTotalLabel }}</span><b>{{ fmtNumber(queryTotal) }}</b><small>人次</small></div>
+      <div class="summary-item"><span>{{ selectedStations.length > 1 ? '单站峰值' : '峰值' }}</span><b>{{ fmtNumber(queryPeak) }}</b><small>人次/{{ granularity === 'second' ? '秒' : (granularity === 'minute' ? '分' : '小时') }}</small></div>
+      <div class="summary-item"><span>数据点</span><b>{{ queryRows.length }}</b><small>个</small></div>
+      <div class="summary-item"><span>当前选择</span><b>{{ selectionLabel }}</b></div>
+    </div>
+
+    <div class="query-detail-grid">
+      <div class="chart-wrap">
+        <div class="chart query-chart" ref="queryEl"></div>
+        <div class="empty" v-if="queryLoading">加载中…</div>
+        <div class="empty" v-else-if="queryError">{{ queryError }}</div>
+        <div class="empty" v-else-if="!queryRows.length">暂无数据</div>
+      </div>
+      <aside class="query-rank">
+        <div class="table-head" style="margin-top: 0">
+          <h3>{{ queryRankLabel }}</h3>
+        </div>
+        <ol class="rank">
+          <li v-for="(item, index) in queryRank" :key="item.station_id">
+            <span class="badge" :class="'top' + (index + 1)">{{ index + 1 }}</span>
+            <div class="rank-main">
+              <span class="rank-name">{{ stationLabel(item.station_id) }}</span>
+              <div class="rank-bar"><span :style="{ width: rankBarWidth(item) }"></span></div>
+            </div>
+            <span class="rank-num">{{ rankText(item) }}</span>
+          </li>
+          <li class="rank-empty" v-if="!queryRank.length">暂无数据</li>
+        </ol>
+        <div class="rank-foot">按所选方向排序 · {{ rangeMode === 'today' ? '今日累计' : '所选时间范围' }}</div>
+      </aside>
+    </div>
+
+    <div class="query-note" v-if="queryTruncated">
+      数据点超过 2000 个，接口已等间隔抽稀；缩小时间范围或改用分钟/小时粒度可看到更完整的点。
+    </div>
+
+    <div class="table-head">
+      <h3>明细</h3>
+      <span class="hint">显示前 {{ queryTableLimit }} 行 · 完整数据请导出 CSV</span>
+      <button class="tab" @click="exportCsv" :disabled="!queryRows.length">导出 CSV</button>
+    </div>
+    <div class="data-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>站点</th>
+            <th v-if="direction === 'all'">合计</th>
+            <th v-if="direction === 'all' || direction === 'in'">进站</th>
+            <th v-if="direction === 'all' || direction === 'out'">出站</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in queryRows.slice(0, queryTableLimit)" :key="row.key">
+            <td>{{ formatTs(row.ts) }}</td>
+            <td>{{ stationLabel(row.station) }}</td>
+            <td v-if="direction === 'all'">{{ fmtNumber(row.total) }}</td>
+            <td v-if="direction === 'all' || direction === 'in'">{{ fmtNumber(row.in) }}</td>
+            <td v-if="direction === 'all' || direction === 'out'">{{ fmtNumber(row.out) }}</td>
+          </tr>
+          <tr v-if="!queryRows.length">
+            <td :colspan="direction === 'all' ? 5 : 4">暂无数据</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="query-note">
+      区间累计是所选时间点之和，不是“今日累计”；今日汇总以 /api/summary/today 的统计起点为准。
+    </div>
+  </section>
 
   <div class="drawer-mask" v-if="helpOpen" @click.self="helpOpen = false"></div>
   <aside class="drawer" v-if="helpOpen" role="dialog" aria-label="帮助">
@@ -383,14 +641,17 @@
         <p class="lead">这块屏只回答当下三件事：哪个站人多、有没有超阈值、数据还可不可信。</p>
         <table>
           <tbody>
-            <tr><td>实时客流</td><td>当前 1 秒窗口内所有事件的 passengers 之和，每秒清零重算</td></tr>
+            <tr><td>当前秒乘降量</td><td>当前 1 秒窗口内进站 + 出站的 passengers 之和，每秒清零重算</td></tr>
+            <tr><td>区间累计</td><td>查询页对所选时间范围的逐秒/分钟/小时点求和，是前端汇总，不是“今日累计”</td></tr>
+            <tr><td>今日累计</td><td>查询页顶部“今日汇总”，来自 /api/summary/today，起点为项目时区当日 0 点</td></tr>
+            <tr><td>方向</td><td>进站/出站由契约 v1.3 提供；计算端双写完成前为 null，页面显示“—”，不拿合计顶替</td></tr>
             <tr><td>活跃站点</td><td>当前窗口内有数据的站点数</td></tr>
             <tr><td>迟到</td><td>事件时间早于窗口起点 2 秒以上，只计数，不计入客流</td></tr>
             <tr><td>非法</td><td>缺必填字段、类型不对、JSON 解析失败</td></tr>
-            <tr><td>排行与趋势</td><td>排行取最近 5 分钟累计降序；趋势按秒聚合，可回溯 1—60 分钟</td></tr>
+            <tr><td>排行与趋势</td><td>排行取最近 5 分钟累计降序；趋势与查询支持秒/分钟/小时粒度，最多回溯 60 分钟或今日</td></tr>
           </tbody>
         </table>
-        <div class="note">窗口按处理时间切、进站出站合并统计、迟到不回补；快照 TTL 5 秒，消费者停 5 秒以上页面就显示“暂无数据”。阈值走服务端配置，页面只照下发的值渲染。</div>
+        <div class="note">窗口按处理时间切、迟到不回补；快照 TTL 5 秒，消费者停 5 秒以上页面就显示“暂无数据”。阈值走服务端配置，页面只照下发的值渲染。</div>
       </div>
 
       <div v-if="helpTab === 'judge'">
@@ -416,20 +677,22 @@
 
       <div v-if="helpTab === 'faq'">
         <div class="faq">
-          <details><summary>为什么实时客流每秒都归零？</summary>
-            <p>它是 1 秒窗口值，不是累计值。要展示今日累计得新增字段，属于契约变更。</p></details>
+          <details><summary>为什么当前秒乘降量每秒都归零？</summary>
+            <p>它是 1 秒窗口值，不是累计值。要看今日累计请切到“客流查询”，顶部今日汇总来自 /api/summary/today。</p></details>
           <details><summary>排行有数字，柱子却是 0？</summary>
             <p>排行看最近 5 分钟，柱子只看当前这一秒。刚回放完也会这样，5 分钟后自然消失。</p></details>
           <details><summary>告警阈值在哪里改？</summary>
             <p>改环境变量 ALERT_THRESHOLD 后重启服务端；页面直接使用接口下发的值。</p></details>
           <details><summary>能看到进站和出站分开统计吗？</summary>
-            <p>暂时不能，目前合并统计。消息里有 event_type，拆开属于契约待定项。</p></details>
+            <p>接口已支持 direction=in / out；计算端双写完成前返回 null，页面显示“—”，不会把合计拆成进站或出站。</p></details>
         </div>
         <h4>接口入口</h4>
         <div class="links">
           <a href="/api/snapshot" target="_blank" rel="noopener">/api/snapshot <em>当前快照</em></a>
-          <a href="/api/series?minutes=5" target="_blank" rel="noopener">/api/series <em>历史序列</em></a>
-          <a href="/api/rank?top=5" target="_blank" rel="noopener">/api/rank <em>站点排行</em></a>
+          <a href="/api/series?minutes=5&granularity=minute&direction=all" target="_blank" rel="noopener">/api/series <em>历史序列</em></a>
+          <a href="/api/rank?top=5&minutes=5" target="_blank" rel="noopener">/api/rank <em>站点排行</em></a>
+          <a href="/api/summary/today" target="_blank" rel="noopener">/api/summary/today <em>今日汇总</em></a>
+          <a href="/api/stations" target="_blank" rel="noopener">/api/stations <em>站点元数据</em></a>
           <span class="plain">docs/02-设计/指标口径.md <em>口径</em></span>
           <span class="plain">docs/02-设计/接口契约.md <em>字段</em></span>
         </div>
@@ -441,12 +704,14 @@
 {% endverbatim %}
 
 <script>
-const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
 
 const SNAPSHOT_MS = 1000;       // 快照刷新间隔
 const HISTORY_MS = 5000;        // 历史与排行刷新间隔，没必要每秒查库
 const HEALTH_LEN = 60;          // 数据健康走势保留最近 60 秒
 const LINE_COLORS = { L1: "#2f6bff", L2: "#8b5cf6" };  // 与图例、柱色同一份来源，改色只改这里
+const QUERY_COLORS = ["#2f6bff", "#8b5cf6", "#12a150", "#d98b00"];  // 查询页最多对比 4 个站
+const QUERY_TABLE_LIMIT = 200;  // 表格只渲染前 200 行，完整数据走 CSV，避免大范围查询卡住
 const PANEL_TOOLTIP = {
   backgroundColor: "#ffffff", borderColor: "#e8e8e4", borderWidth: 1,
   textStyle: { color: "#14161a", fontSize: 12 },
@@ -477,6 +742,38 @@ createApp({
     const online = ref(true);
     const line = ref("all");
     const selected = ref("");        // 空串代表全部站点，下钻时存 station_id
+    const view = ref("live");        // live=实时监看，query=客流查询，两个视图共用同一份快照
+    const minutes = ref(30);         // 查询回溯范围，接口支持 1—60 分钟
+    const minuteOptions = [1, 5, 15, 30, 60];
+    const rangeMode = ref("minutes"); // minutes=最近 N 分钟，today=今日 0 点到现在
+    const selectedLine = ref("");    // 空串代表全部线路
+    const direction = ref("all");    // all / in / out，对应契约 v1.3 的 direction
+    const directionOptions = [
+      { value: "all", label: "合计" },
+      { value: "in", label: "进站" },
+      { value: "out", label: "出站" }
+    ];
+    const granularity = ref("second");
+    const granularityOptions = [
+      { value: "second", label: "秒" },
+      { value: "minute", label: "分钟" },
+      { value: "hour", label: "小时" }
+    ];
+    const stationMeta = ref({ stations: [], lines: [] });  // /api/stations，缺字段时回退到站点编码
+    const stationMetaLoaded = ref(false);
+    const summary = ref(null);       // /api/summary/today
+    const summaryLoading = ref(false);
+    const summaryError = ref("");
+    const summaryLoaded = ref(false);
+    const queryRank = ref([]);         // 区间 Top 5；今日模式复用 summary.top_stations
+    const queryTruncated = ref(false);  // 接口抽稀过 2000 个点，页面要提示
+    const selectedStations = ref([]);  // 空数组代表全部站点；最多 4 个，允许多站对比
+    const querySeries = ref([]);     // [{ station_id, points }]，每个站一条序列
+    const queryLoading = ref(false);
+    const queryError = ref("");
+    const queryLoaded = ref(false);  // 首次进查询页才请求，避免拖慢首屏
+    const autoRefresh = ref(false);  // 查询默认手动刷新，看历史时不被自动滚动打断
+    const queryEl = ref(null);
     const helpOpen = ref(false);     // 帮助抽屉默认关闭，首屏不放说明文字
     const helpTab = ref("metric");
     const barEl = ref(null);
@@ -492,14 +789,24 @@ createApp({
     const alertStart = ref(0);
     const alertPeak = ref(0);
 
-    const lineOptions = [
-      { value: "all", label: "全部线路" },
-      { value: "L1", label: "1 号线" },
-      { value: "L2", label: "2 号线" }
-    ];
+    // 线路选项优先用 /api/stations 的线路名；接口还没修好时退回 L1/L2 的固定名称
+    const lineOptions = computed(() => {
+      const lines = stationMeta.value.lines.length
+        ? stationMeta.value.lines.map(line => ({
+            value: line.line_id,
+            label: line.name || lineName(line.line_id)
+          }))
+        : [
+            { value: "L1", label: "1 号线" },
+            { value: "L2", label: "2 号线" }
+          ];
+      return [{ value: "all", label: "全部线路" }, ...lines];
+    });
 
     let barChart = null;
     let trendChart = null;
+    let queryChart = null;
+    let querySeq = 0;  // 连续切时间范围时只接受最后一次请求的结果
     let timers = [];
     let observer = null;
     let prevPassengers = new Map();
@@ -513,8 +820,92 @@ createApp({
     const rankMax = computed(() => Math.max(1, ...rank.value.map(item => item.passengers)));
     const stationOptions = computed(() => [
       { value: "", label: "全部" },
-      ...stations.value.map(s => ({ value: s.station_id, label: s.station_id }))
+      ...stations.value.map(s => ({ value: s.station_id, label: stationLabel(s.station_id) }))
     ]);
+    const stationMetaById = computed(() =>
+      new Map(stationMeta.value.stations.map(item => [item.station_id, item]))
+    );
+    // 查询页的站点来源：优先用当前快照；消费者刚停时用排行兜底，避免选择器突然空掉
+    const stationList = computed(() => {
+      const map = new Map();
+      for (const s of stations.value) map.set(s.station_id, s);
+      for (const r of rank.value) {
+        if (!map.has(r.station_id)) map.set(r.station_id, { station_id: r.station_id, line_id: "" });
+      }
+      const items = [...map.values()];
+      // 选了线路就只展示这条线的站点，避免用户选了 L1 又点 L2 的站，查出来是空集
+      return selectedLine.value ? items.filter(s => s.line_id === selectedLine.value) : items;
+    });
+    const selectionLabel = computed(() =>
+      selectedStations.value.length
+        ? selectedStations.value.map(stationLabel).join(" / ")
+        : "全部站点"
+    );
+    const queryTotalLabel = computed(() => {
+      const base = selectedStations.value.length ? "所选站点" : "全部站点";
+      const metric = direction.value === "all" ? "乘降量" : (direction.value === "in" ? "进站" : "出站");
+      return base + metric;
+    });
+    function pointValue(point) {
+      if (direction.value === "in") return point.in;
+      if (direction.value === "out") return point.out;
+      return point.total != null ? point.total : point.passengers;
+    }
+    // 多站时把各站序列摊平成明细；同一时间戳下按站点名排序，导出的 CSV 也可直接对账
+    const queryRows = computed(() => {
+      const rows = [];
+      for (const series of querySeries.value) {
+        const who = series.station_id || "全部";
+        for (const point of series.points || []) {
+          rows.push({
+            key: who + point.ts,
+            ts: point.ts,
+            station: who,
+            in: point.in,
+            out: point.out,
+            total: point.total != null ? point.total : point.passengers,
+            value: pointValue(point)
+          });
+        }
+      }
+      rows.sort((a, b) => (a.ts === b.ts ? a.station.localeCompare(b.station) : a.ts.localeCompare(b.ts)));
+      return rows;
+    });
+    // 方向未知时接口给 null；合计不能拿 0 冒充，也不能把 total 顶到进/出站上
+    const queryTotal = computed(() => {
+      const rows = queryRows.value;
+      if (!rows.length) return 0;
+      if (rows.some(row => row.value === null || row.value === undefined)) return null;
+      return rows.reduce((sum, row) => sum + row.value, 0);
+    });
+    const queryPeak = computed(() => {
+      const rows = queryRows.value;
+      if (!rows.length) return 0;
+      if (rows.some(row => row.value === null || row.value === undefined)) return null;
+      return rows.reduce((max, row) => Math.max(max, row.value), 0);
+    });
+    const directionUnknown = computed(() =>
+      direction.value !== "all" && queryRows.value.length > 0 &&
+      queryRows.value.every(row => row.value === null || row.value === undefined)
+    );
+    function rankNumber(item) {
+      if (direction.value === "in") return item.in;
+      if (direction.value === "out") return item.out;
+      return item.passengers != null ? item.passengers : item.total;
+    }
+    function rankText(item) {
+      return fmtNumber(rankNumber(item));
+    }
+    const queryRankMax = computed(() =>
+      Math.max(1, ...queryRank.value.map(item => Number(rankNumber(item)) || 0))
+    );
+    const queryRankLabel = computed(() =>
+      rangeMode.value === "today" ? "今日 Top 5" : "近 " + minutes.value + " 分钟 Top 5"
+    );
+    function rankBarWidth(item) {
+      const value = Number(rankNumber(item));
+      return value > 0 ? Math.max(4, Math.round(value / queryRankMax.value * 100)) + "%" : "0%";
+    }
     const alertSeconds = computed(() =>
       alertStart.value ? Math.max(0, Math.round((now.value - alertStart.value) / 1000)) : 0
     );
@@ -551,8 +942,8 @@ createApp({
       const gap = keys.length > 1 ? 120 : 0;
       return keys.map((key, i) => ({
         key,
-        short: key || "—",
-        color: LINE_COLORS[key] || "#2f6bff",
+        short: key ? lineLabel(key) : "—",
+        color: lineColorOf(key),
         y: keys.length > 1 ? 110 + i * gap : 150
       }));
     });
@@ -573,7 +964,7 @@ createApp({
           nodes.push({
             id: s.station_id,
             passengers: s.passengers,
-            color: LINE_COLORS[key] || "#2f6bff",
+            color: lineColorOf(key),
             x: rows.length > 1 ? 55 + si * step : 180,
             y: keys.length > 1 ? 110 + li * gap : 150,
             // 半径按开方缩放：面积和客流成正比，小站才不会被大站压没
@@ -618,6 +1009,346 @@ createApp({
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(url + " -> " + res.status);
       return res.json();
+    }
+
+    function stationLabel(id) {
+      if (!id || id === "全部") return id || "全部";
+      const meta = stationMetaById.value.get(id);
+      return meta && meta.name ? meta.name : id;
+    }
+
+    function lineLabel(id) {
+      if (!id) return "未分线";
+      const line = stationMeta.value.lines.find(item => item.line_id === id);
+      return line && line.name ? line.name : lineName(id);
+    }
+
+    function lineColorOf(id) {
+      const line = stationMeta.value.lines.find(item => item.line_id === id);
+      const color = line && line.color;
+      return /^#[0-9a-f]{6}$/i.test(color || "") ? color : (LINE_COLORS[id] || "#2f6bff");
+    }
+
+    function fmtNumber(value) {
+      return value === null || value === undefined ? "—" : value;
+    }
+
+    function formatTs(ts) {
+      if (!ts) return "—";
+      if (granularity.value === "hour") return ts.slice(5, 13).replace("T", " ") + ":00";
+      if (granularity.value === "minute") return ts.slice(11, 16);
+      return ts.slice(11, 19);
+    }
+
+    async function loadStationMeta() {
+      try {
+        const data = await getJSON("/api/stations");
+        const items = Array.isArray(data.stations) ? data.stations : [];
+        const lines = Array.isArray(data.lines) ? data.lines : [];
+        // 采集表结构变更后服务端可能暂时把 lines/stations 当成两个伪站；只留带 line_id 的真站点
+        stationMeta.value = {
+          stations: items.filter(item => item && item.station_id && item.line_id),
+          lines: lines.filter(item => item && item.line_id)
+        };
+        stationMetaLoaded.value = true;
+      } catch (e) {
+        stationMeta.value = { stations: [], lines: [] };
+      }
+    }
+
+    async function loadSummary() {
+      summaryLoading.value = true;
+      summaryError.value = "";
+      try {
+        summary.value = await getJSON("/api/summary/today");
+        summaryLoaded.value = true;
+        if (rangeMode.value === "today") queryRank.value = summary.value.top_stations || [];
+      } catch (e) {
+        summaryError.value = "今日汇总加载失败";
+      } finally {
+        summaryLoading.value = false;
+      }
+    }
+
+    async function loadRank() {
+      if (rangeMode.value === "today") {
+        queryRank.value = summary.value?.top_stations || [];
+        return;
+      }
+      const params = new URLSearchParams({ top: "5", minutes: String(minutes.value) });
+      if (selectedLine.value) params.set("line_id", selectedLine.value);
+      if (direction.value !== "all") params.set("direction", direction.value);
+      try {
+        const data = await getJSON("/api/rank?" + params.toString());
+        queryRank.value = Array.isArray(data.top) ? data.top : [];
+      } catch (e) {
+        queryRank.value = [];
+      }
+    }
+
+    function refreshAll() {
+      loadQuery();
+      loadSummary();
+    }
+
+    function setRangeMode(mode) {
+      rangeMode.value = mode;
+      if (mode === "today") granularity.value = "minute";
+      syncHash();
+      loadQuery();
+    }
+
+    function setLine(value) {
+      selectedLine.value = value;
+      selectedStations.value = [];
+      syncHash();
+      loadQuery();
+    }
+
+    function setDirection(value) {
+      direction.value = value;
+      syncHash();
+      loadQuery();
+    }
+
+    function setGranularity(value) {
+      granularity.value = value;
+      syncHash();
+      loadQuery();
+    }
+
+    // 查询条件写进 hash，刷新/转发链接还能回到同一组站点和时间范围
+    function syncHash() {
+      if (view.value !== "query") {
+        history.replaceState(null, "", "#live");
+        return;
+      }
+      const params = new URLSearchParams();
+      params.set("range", rangeMode.value);
+      if (rangeMode.value === "minutes") params.set("minutes", String(minutes.value));
+      params.set("granularity", granularity.value);
+      if (direction.value !== "all") params.set("direction", direction.value);
+      if (selectedLine.value) params.set("line_id", selectedLine.value);
+      if (selectedStations.value.length) params.set("stations", selectedStations.value.join(","));
+      history.replaceState(null, "", "#query?" + params.toString());
+    }
+
+    function readHash() {
+      const hash = window.location.hash || "";
+      if (!hash.startsWith("#query")) return;
+      view.value = "query";
+      const params = new URLSearchParams(hash.split("?")[1] || "");
+      rangeMode.value = params.get("range") === "today" ? "today" : "minutes";
+      const parsed = Number.parseInt(params.get("minutes") || "", 10);
+      if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 60) minutes.value = parsed;
+      const gran = params.get("granularity");
+      if (["second", "minute", "hour"].includes(gran)) granularity.value = gran;
+      else if (rangeMode.value === "today") granularity.value = "minute";
+      const dir = params.get("direction");
+      if (["all", "in", "out"].includes(dir)) direction.value = dir;
+      selectedLine.value = params.get("line_id") || "";
+      const stationsParam = params.get("stations") || "";
+      selectedStations.value = stationsParam.split(",")
+        .map(id => id.trim())
+        .filter(Boolean)
+        .slice(0, 4);
+    }
+
+    async function switchView(next) {
+      if (view.value === next) return;
+      view.value = next;
+      syncHash();
+      await nextTick();
+      if (next === "live") {
+        // 从查询页回来时容器刚从 display:none 恢复，必须重算尺寸
+        barChart && barChart.resize();
+        trendChart && trendChart.resize();
+        return;
+      }
+      if (!queryChart && queryEl.value) queryChart = echarts.init(queryEl.value);
+      if (queryChart) queryChart.resize();
+      if (!stationMetaLoaded.value) loadStationMeta();
+      if (!queryLoaded.value) await loadQuery();
+      if (!summaryLoaded.value) await loadSummary();
+    }
+
+    function toggleAutoRefresh() {
+      autoRefresh.value = !autoRefresh.value;
+      if (autoRefresh.value && view.value === "query") refreshAll();
+    }
+
+    function setMinutes(value) {
+      rangeMode.value = "minutes";
+      minutes.value = value;
+      // 大范围用秒级会超过 2000 点被抽稀，默认切到分钟；用户仍可手动改回秒
+      if (value <= 15) granularity.value = "second";
+      else if (granularity.value === "second") granularity.value = "minute";
+      syncHash();
+      if (view.value === "query") loadQuery();
+    }
+
+    function selectAllStations() {
+      selectedStations.value = [];
+      syncHash();
+      if (view.value === "query") loadQuery();
+    }
+
+    function toggleStation(id) {
+      const next = selectedStations.value.filter(item => item !== id);
+      if (next.length === selectedStations.value.length) {
+        if (next.length >= 4) return;  // 超过 4 条线图会挤在一起，宁可少选
+        next.push(id);
+      }
+      selectedStations.value = next;
+      syncHash();
+      if (view.value === "query") loadQuery();
+    }
+
+    function queryParams() {
+      const params = new URLSearchParams();
+      if (rangeMode.value === "today") {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        // 优先用 summary 的项目时区起点，避免浏览器时区与 Asia/Shanghai 不一致
+        params.set("from", summary.value?.since || start.toISOString());
+        params.set("to", new Date().toISOString());
+      } else {
+        params.set("minutes", String(minutes.value));
+      }
+      params.set("granularity", granularity.value);
+      if (direction.value !== "all") params.set("direction", direction.value);
+      if (selectedLine.value) params.set("line_id", selectedLine.value);
+      return params;
+    }
+
+    async function loadQuery() {
+      const seq = ++querySeq;
+      queryLoading.value = true;
+      queryError.value = "";
+      try {
+        const ids = selectedStations.value.slice();
+        const base = queryParams();
+        // 接口一次只接受一个 station_id；多站对比就在前端并发请求后合并
+        const urls = ids.length
+          ? ids.map(id => {
+              const params = new URLSearchParams(base);
+              params.set("station_id", id);
+              return "/api/series?" + params.toString();
+            })
+          : ["/api/series?" + base.toString()];
+        const results = await Promise.all(urls.map(getJSON));
+        if (seq !== querySeq) return;
+        queryTruncated.value = results.some(result => result.truncated === true);
+        querySeries.value = results.map((result, index) => ({
+          station_id: ids[index] || "",
+          points: Array.isArray(result.points) ? result.points : []
+        }));
+        queryLoaded.value = true;
+        loadRank();
+        await nextTick();
+        drawQuery();
+      } catch (e) {
+        if (seq !== querySeq) return;
+        queryError.value = "加载失败，请检查接口或稍后重试";
+        querySeries.value = [];
+        queryTruncated.value = false;
+        queryChart && queryChart.clear();
+      } finally {
+        if (seq === querySeq) queryLoading.value = false;
+      }
+    }
+
+    function drawQuery() {
+      if (!queryChart) return;
+      const seriesRows = querySeries.value;
+      const times = [...new Set(seriesRows.flatMap(row => (row.points || []).map(point => point.ts)))].sort();
+      const series = seriesRows.map((row, index) => {
+        const byTs = new Map((row.points || []).map(point => [point.ts, pointValue(point)]));
+        const meta = row.station_id ? stationMetaById.value.get(row.station_id) : null;
+        // 单站优先用线路色；多站时同一线路可能有多个站，改用调色板区分站点
+        const color = seriesRows.length === 1
+          ? (meta && meta.line_id ? lineColorOf(meta.line_id) : QUERY_COLORS[0])
+          : QUERY_COLORS[index % QUERY_COLORS.length];
+        return {
+          name: row.station_id ? stationLabel(row.station_id) : "全部站点",
+          type: "line",
+          smooth: true,
+          showSymbol: false,
+          connectNulls: false,
+          data: times.map(ts => (byTs.has(ts) ? byTs.get(ts) : null)),
+          lineStyle: { width: 2.2, color },
+          itemStyle: { color },
+          areaStyle: seriesRows.length === 1 ? {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: "rgba(47,107,255,.16)" },
+              { offset: 1, color: "rgba(47,107,255,0)" }
+            ])
+          } : undefined
+        };
+      });
+      queryChart.setOption({
+        animationDuration: 300,
+        color: QUERY_COLORS,
+        legend: {
+          show: seriesRows.length > 1, top: 0, right: 8,
+          itemWidth: 10, itemHeight: 10, textStyle: { color: "#6b7280", fontSize: 11 }
+        },
+        tooltip: {
+          trigger: "axis",
+          axisPointer: { type: "line", lineStyle: { color: "rgba(47,107,255,.30)", type: "dashed" } },
+          ...PANEL_TOOLTIP,
+          formatter: items => {
+            const time = items[0] && items[0].axisValue ? items[0].axisValue : "";
+            return time + items.map(item =>
+              "<br/>" + item.marker + item.seriesName + "：<b>" +
+              (item.value == null ? "—" : item.value) + "</b> 人次/秒"
+            ).join("");
+          }
+        },
+        grid: { left: 48, right: 24, top: seriesRows.length > 1 ? 34 : 24, bottom: 44 },
+        xAxis: {
+          type: "category", boundaryGap: ["1%", "1%"], data: times.map(formatTs), ...AXIS,
+          axisLabel: { ...AXIS.axisLabel, hideOverlap: true }
+        },
+        yAxis: {
+          type: "value", name: "人次/秒", minInterval: 1,
+          nameTextStyle: { color: "#a8adb5", fontSize: 11 }, splitLine: SPLIT_LINE, ...AXIS
+        },
+        dataZoom: [
+          { type: "inside" },
+          { type: "slider", height: 14, bottom: 8, borderColor: "transparent",
+            backgroundColor: "#f4f5f3", fillerColor: "rgba(47,107,255,.12)",
+            handleStyle: { color: "#2f6bff" }, textStyle: { color: "#a8adb5", fontSize: 10 } }
+        ],
+        series
+      }, true);
+    }
+
+    function exportCsv() {
+      if (!queryRows.value.length) return;
+      const csvCell = value => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+      const lines = ["时间,站点,方向,合计,进站,出站,粒度"];
+      for (const row of queryRows.value) {
+        lines.push([
+          row.ts,
+          stationLabel(row.station),
+          direction.value,
+          row.total,
+          row.in,
+          row.out,
+          granularity.value
+        ].map(csvCell).join(","));
+      }
+      const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const suffix = rangeMode.value === "today" ? "今日" : minutes.value + "分钟";
+      link.download = "客流查询_" + suffix + "_" + granularity.value + ".csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
     }
 
     function trackHealth(late, invalid) {
@@ -700,7 +1431,7 @@ createApp({
           const row = rows[items[0].dataIndex];
           const dv = deltas[row.station_id] || 0;
           const dvText = dv === 0 ? "持平" : (dv > 0 ? "+" : "") + dv;
-          return row.station_id + " · " + lineName(row.line_id) +
+          return stationLabel(row.station_id) + " · " + lineLabel(row.line_id) +
                  "<br/>客流 <b style='color:#2f6bff'>" + row.passengers + "</b> 人次/秒" +
                  "<br/>较上一秒 <b>" + dvText + "</b>";
         }
@@ -714,7 +1445,7 @@ createApp({
         ...PANEL_TOOLTIP,
         formatter: items => {
           const p = points[items[0].dataIndex];
-          const who = selected.value || "全部站点";
+          const who = selected.value ? stationLabel(selected.value) : "全部站点";
           return p.ts.slice(11, 19) + " · " + who +
                  "<br/>客流 <b style='color:#2f6bff'>" + p.passengers + "</b> 人次/秒";
         }
@@ -735,7 +1466,7 @@ createApp({
         return {
           value: s.passengers,
           itemStyle: {
-            color: line.value === "all" ? (LINE_COLORS[s.line_id] || "#2f6bff") : "#2f6bff",
+            color: line.value === "all" ? lineColorOf(s.line_id) : "#2f6bff",
             borderRadius: [6, 6, 0, 0],
             // 选中的站在柱子上加亮边，和右侧排行的选中态对应
             borderColor: picked ? "#14161a" : "transparent",
@@ -748,7 +1479,7 @@ createApp({
         animationDurationUpdate: 300,
         tooltip: barsTooltip(rows),
         grid: { left: 48, right: 22, top: 44, bottom: 30 },
-        xAxis: { type: "category", data: rows.map(s => s.station_id), ...AXIS },
+        xAxis: { type: "category", data: rows.map(s => stationLabel(s.station_id)), ...AXIS },
         yAxis: {
           type: "value", name: "人次/秒", minInterval: 1,
           nameTextStyle: { color: "#a8adb5", fontSize: 11 },
@@ -821,20 +1552,37 @@ createApp({
     });
 
     onMounted(() => {
+      readHash();  // 允许用 #query?minutes=30&stations=A01,A02 直接打开一组查询条件
       barChart = echarts.init(barEl.value);
       trendChart = echarts.init(lineEl.value);
       // 用 ResizeObserver 盯容器，比只听 window.resize 更准（侧栏折叠、字体变化也能触发）
       observer = new ResizeObserver(() => {
         barChart && barChart.resize();
         trendChart && trendChart.resize();
+        queryChart && queryChart.resize();
       });
       observer.observe(barEl.value);
       observer.observe(lineEl.value);
+      if (queryEl.value) observer.observe(queryEl.value);
       loadSnapshot();
       loadHistory();
+      loadStationMeta();
+      if (view.value === "query") {
+        nextTick(() => {
+          if (!queryChart && queryEl.value) queryChart = echarts.init(queryEl.value);
+          loadQuery();
+          loadSummary();
+        });
+      }
       timers.push(setInterval(loadSnapshot, SNAPSHOT_MS));
       timers.push(setInterval(loadHistory, HISTORY_MS));
       timers.push(setInterval(() => { now.value = Date.now(); }, 1000));
+      // 查询页默认手动刷新；打开自动刷新才每 5 秒重查，避免看历史时时间轴自己跳
+      timers.push(setInterval(() => {
+        if (view.value === "query" && autoRefresh.value && !queryLoading.value && !summaryLoading.value) {
+          refreshAll();
+        }
+      }, HISTORY_MS));
       // Esc 关闭帮助抽屉，值班时手不离键盘也能退出
       document.addEventListener("keydown", onKeydown);
     });
@@ -845,13 +1593,24 @@ createApp({
       observer && observer.disconnect();
       barChart && barChart.dispose();
       trendChart && trendChart.dispose();
+      queryChart && queryChart.dispose();
     });
 
     return { total, snapshotTs, lateCount, invalidCount, rank, trends, online, line, lineOptions,
              threshold, alerting, clock, stationCount, visibleStations, snapshotLabel,
              freshText, freshLevel, barWidth, barEl, lineEl,
              selected, stationOptions, pickStation, flowLines, flowNodes, spark, health,
-             alertSeconds, alertPeak, helpOpen, helpTab, openHelp };
+             alertSeconds, alertPeak, helpOpen, helpTab, openHelp,
+             view, switchView, minutes, minuteOptions, rangeMode, setRangeMode,
+             selectedLine, setLine, direction, directionOptions, setDirection,
+             granularity, granularityOptions, setGranularity,
+             selectedStations, stationList, selectionLabel, stationLabel, lineLabel,
+             toggleStation, selectAllStations, summary, summaryLoading, summaryError, refreshAll,
+             querySeries, queryRows, queryLoading, queryError, queryTotal, queryPeak,
+             queryTotalLabel, queryTruncated, directionUnknown,
+             queryRank, queryRankLabel, rankText, rankBarWidth,
+             queryTableLimit: QUERY_TABLE_LIMIT, queryEl, autoRefresh,
+             toggleAutoRefresh, loadQuery, exportCsv, fmtNumber, formatTs };
   }
 }).mount("#app");
 </script>
