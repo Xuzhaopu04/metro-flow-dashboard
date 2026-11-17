@@ -9,11 +9,9 @@ class MetricWindow(models.Model):
     passengers 是该窗口内的新增客流，不是累计值。
     """
 
-    ts = models.DateTimeField(db_index=True, help_text="窗口起始时间")
+    ts = models.DateTimeField(db_index=True, help_text="窗口结束时间")
     station_id = models.CharField(max_length=16, help_text="站点编码")
-    passengers = models.IntegerField(default=0, help_text="窗口内乘降量（进站 + 出站，一个乘客刷两次卡计两次）")
-    in_passengers = models.IntegerField(default=0, help_text="窗口内进站量，按 event_type=in 统计")
-    out_passengers = models.IntegerField(default=0, help_text="窗口内出站量，按 event_type=out 统计")
+    passengers = models.IntegerField(default=0, help_text="窗口内新增客流")
     late_count = models.IntegerField(default=0, help_text="该站点在本窗口内的迟到事件数")
 
     class Meta:
