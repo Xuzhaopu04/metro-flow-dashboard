@@ -1,6 +1,6 @@
 """采集模块（闸机模拟器）测试。
 
-覆盖四个核心场景：事件生成、速率控制、异常注入、回放。
+覆盖事件生成、速率控制、异常注入、回放，以及元数据、场景、历史回填。
 用假客户端截获 emit，不依赖 Redis。
 """
 
@@ -26,6 +26,25 @@ class FakeRedis:
 
 
 # ---------- 1. 事件生成 ----------
+
+def test_stations_carry_display_metadata():
+    """站点要带中文名、线序、坐标，供 /api/stations 和前端展示。"""
+    for station_id, station in sim.STATIONS.items():
+        assert station["name"], station_id
+        assert station["line_id"] in sim.LINES, station_id
+        assert isinstance(station["order"], int), station_id
+        assert isinstance(station["x"], (int, float)), station_id
+        assert isinstance(station["y"], (int, float)), station_id
+        assert 0 <= station["weight"] <= 1, station_id
+
+
+def test_lines_carry_display_metadata():
+    """线路要带名称、颜色、线序。"""
+    for line_id, line in sim.LINES.items():
+        assert line["name"], line_id
+        assert line["color"].startswith("#"), line_id
+        assert isinstance(line["order"], int), line_id
+
 
 def test_make_event_has_all_contract_fields():
     """契约 2.1 的六个字段都要有，类型要对。"""
@@ -58,12 +77,35 @@ def test_make_event_morning_peak_biases_inbound():
     assert ins > 130  # 期望约 156，留余量
 
 
+def test_make_event_evening_peak_biases_outbound():
+    """晚高峰 72% 概率出站，跑 200 次出站应明显多于进站。"""
+    outs = sum(
+        1 for _ in range(200)
+        if sim.make_event(now=datetime(2026, 11, 10, 18, 0, 0, tzinfo=TZ),
+                          scenario="evening_peak")["event_type"] == "out"
+    )
+    assert outs > 130
+
+
+def test_scenario_sets_passenger_upper():
+    """固定场景改写单笔乘客数上限；burst 放宽到 8。"""
+    seen = []
+
+    def fake_randint(low, high):
+        seen.append(high)
+        return low
+
+    with mock.patch.object(sim.random, "randint", side_effect=fake_randint):
+        sim.make_event(now=datetime(2026, 11, 10, 12, 0, 0, tzinfo=TZ), scenario="burst")
+    assert seen[-1] == 8
+
+
 # ---------- 2. 速率控制 ----------
 
 def test_stream_forever_respects_count():
     """--count N 恰好发 N 条。"""
     client = FakeRedis()
-    args = SimpleNamespace(speed=100, count=5, inject=0.0, dry_run=False)
+    args = SimpleNamespace(speed=100, count=5, inject=0.0, scenario="auto", dry_run=False)
     with mock.patch.object(time, "sleep"):
         sim.stream_forever(args, client)
     assert len(client.sent) == 5
@@ -72,7 +114,7 @@ def test_stream_forever_respects_count():
 def test_stream_forever_uses_inverse_speed_as_interval():
     """发送间隔 = 1 / speed。"""
     client = FakeRedis()
-    args = SimpleNamespace(speed=4, count=2, inject=0.0, dry_run=False)
+    args = SimpleNamespace(speed=4, count=2, inject=0.0, scenario="auto", dry_run=False)
     sleeps = []
     with mock.patch.object(time, "sleep", side_effect=lambda s: sleeps.append(s)):
         sim.stream_forever(args, client)
@@ -149,3 +191,26 @@ def test_replay_empty_file_returns_zero(tmp_path):
     path.write_text("", encoding="utf-8")
     args = SimpleNamespace(replay=str(path), speed=1, dry_run=True)
     assert sim.replay(args, None) == 0
+
+
+# ---------- 5. 历史回填 ----------
+
+def test_backfill_generates_one_event_per_second():
+    """回填 N 分钟产出 N*60 条，时间戳每秒递增。"""
+    client = FakeRedis()
+    args = SimpleNamespace(backfill=2, scenario="offpeak", inject=0.0, dry_run=False)
+    sent = sim.backfill(args, client)
+
+    assert sent == 120
+    stamps = [datetime.fromisoformat(e["event_time"]) for e in client.sent]
+    assert stamps == sorted(stamps)
+    assert (stamps[-1] - stamps[0]).total_seconds() == 119
+    assert stamps[-1] <= datetime.now(TZ)
+
+
+def test_backfill_scenario_limits_passengers():
+    """回填同样受场景约束：平峰单笔不超过 3 人。"""
+    client = FakeRedis()
+    args = SimpleNamespace(backfill=1, scenario="offpeak", inject=0.0, dry_run=False)
+    sim.backfill(args, client)
+    assert all(1 <= e["passengers"] <= 3 for e in client.sent)
