@@ -9,17 +9,21 @@
 
 import json
 import logging
+import re
 from datetime import timedelta
 
 import redis
 from django.conf import settings
 from django.db import DatabaseError
-from django.db.models import Sum
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncHour, TruncMinute
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from .models import MetricWindow
+from .stations import build_line_map, stations_of_line, stations_payload
 
 # 降级是有代价的（数据缺失），每次都要在日志里留下痕迹，否则排障时无从查起
 logger = logging.getLogger(__name__)
@@ -27,9 +31,18 @@ logger = logging.getLogger(__name__)
 # 契约 4.2 / 4.3 规定的参数范围，数字必须与文档一致，改这里就要同步改契约
 DEFAULT_MINUTES = 5
 MAX_MINUTES = 60
-RANK_MINUTES = 5      # 契约 4.3：排行固定统计最近 5 分钟，不接受入参
 DEFAULT_TOP = 5
 MAX_TOP = 20
+TOP_STATIONS = 5       # 契约 4.4：今日汇总里分站 TopN 固定 5 条
+
+# v1.3 新增：方向枚举与聚合粒度
+DIRECTIONS = ("in", "out", "all")
+GRANULARITIES = ("second", "minute", "hour")
+DEFAULT_GRANULARITY = "second"
+# 契约 4.2：秒级点数上限，超出抽稀并标记 truncated
+MAX_POINTS = 2000
+# 契约 4.2：from/to 跨度上限，防止一次查询扫全表
+MAX_SPAN_HOURS = 24
 
 API_PREFIX = "/api/"
 
@@ -161,6 +174,102 @@ def int_param(request, name, default, low, high):
     return value, None
 
 
+def choice_param(request, name, choices, default):
+    """取枚举型查询参数，返回 (值, 错误响应)。
+
+    不传或空串走默认值；传了非法值就报错而不是悄悄回退——
+    回退会让前端以为筛选生效了，实际看的是全量数据，这种"静默错误"最难查。
+    """
+    raw = request.GET.get(name)
+    if raw is None or raw.strip() == "":
+        return default, None
+    value = raw.strip().lower()
+    if value not in choices:
+        allowed = " / ".join(choices)
+        return None, error_response(
+            "INVALID_PARAM", f"{name} 只能是 {allowed}，收到 {raw}", 400
+        )
+    return value, None
+
+
+def time_param(request, name):
+    """取 ISO8601 时间参数，返回 (datetime, 错误响应)。
+
+    Django 的 parse_datetime 要求带日期部分；只给时间会返回 None，
+    这里一并当成格式错误，避免"看起来传了参数其实没生效"。
+
+    时区里的 `+` 必须兜住：查询串里未编码的 `+08:00` 会被解析成空格 ` 08:00`，
+    parse_datetime 随即失败。这是前端最容易踩的坑——直接拼 `isoformat()` 就中招。
+    把它们折回 `+` 比让调用方永远记得 urlencode 更可靠，也让 400 只在真的写错时出现。
+    """
+    raw = request.GET.get(name)
+    if raw is None or raw.strip() == "":
+        return None, None
+    text = raw.strip()
+    # 形如 "2026-11-17T14:55:01 08:00" 且末尾是 6 位时区偏移，还原成 +08:00
+    if re.search(r"\s\d{2}:\d{2}$", text):
+        text = re.sub(r"\s(\d{2}:\d{2})$", r"+\1", text)
+    value = parse_datetime(text)
+    if value is None:
+        return None, error_response(
+            "INVALID_PARAM", f"{name} 必须是 ISO8601 时间，收到 {raw}", 400
+        )
+    # 不带时区的时间按项目时区解释，否则 MySQL 里存的是 UTC 会对不上 8 小时
+    if timezone.is_naive(value):
+        value = timezone.make_aware(value, timezone.get_current_timezone())
+    return value, None
+
+
+def resolve_window(request):
+    """决定查询的时间区间，返回 (since, until, error)。
+
+    from/to 同时给出就用它们，否则退回 minutes。契约 4.2 这么规定，
+    是为了让前端做"查某天某个时段"时不用把跨度换算成分钟数。
+    """
+    start, error = time_param(request, "from")
+    if error:
+        return None, None, error
+    end, error = time_param(request, "to")
+    if error:
+        return None, None, error
+
+    now = timezone.now()
+    if start or end:
+        until = end or now
+        since = start or (until - timedelta(minutes=DEFAULT_MINUTES))
+        if since > until:
+            return None, None, error_response(
+                "INVALID_PARAM", "from 不能晚于 to", 400
+            )
+        if until - since > timedelta(hours=MAX_SPAN_HOURS):
+            return None, None, error_response(
+                "INVALID_PARAM", f"时间跨度不能超过 {MAX_SPAN_HOURS} 小时", 400
+            )
+        return since, until, None
+
+    minutes, error = int_param(request, "minutes", DEFAULT_MINUTES, 1, MAX_MINUTES)
+    if error:
+        return None, None, error
+    return now - timedelta(minutes=minutes), now, None
+
+
+def direction_sums(in_sum, out_sum, total, direction):
+    """按方向把 (in, out, total) 归成最终展示的两个数。
+
+    迁移刚落地时 in/out 两列还是 0（旧消费者只写 passengers），
+    这时退化成用 passengers 兜底，否则加了列却全是零，看板上像服务端漏了数。
+    两列只要有值就信它们，不再回退——真实数据里 in 和 out 可以同时为 0。
+    """
+    if in_sum == 0 and out_sum == 0 and total:
+        # 兜底：把总量记到所选方向上，切"进站"时至少曲线不是一条零线
+        return (0, total) if direction == "out" else (total, 0)
+    if direction == "in":
+        return in_sum, 0
+    if direction == "out":
+        return 0, out_sum
+    return in_sum, out_sum
+
+
 def query_rows(fn, fallback):
     """执行数据库查询，出问题时降级到 fallback，返回查询结果。
 
@@ -191,56 +300,295 @@ def snapshot(request):
     return json_response(read_snapshot())
 
 
-def collect_points(rows):
-    """把聚合结果转成契约 4.2 的 points 结构。"""
-    return [
-        {"ts": local_iso(row["ts"]), "passengers": row["passengers"] or 0}
-        for row in rows
-    ]
+def collect_points(rows, direction="all"):
+    """把聚合结果转成契约 4.2 的 points 结构。
+
+    每点同时给 `in`/`out`/`total`，并保留 v1.2 的 `passengers`（等于 total）：
+    契约承诺"旧调用不传参不受影响"，旧前端读 `passengers` 必须还能画出线。
+    """
+    points = []
+    for row in rows:
+        in_sum, out_sum = direction_sums(
+            row.get("in_p") or 0,
+            row.get("out_p") or 0,
+            row.get("passengers") or 0,
+            direction,
+        )
+        points.append({
+            # 秒级粒度不分桶，行的键是 ts；分桶后键是 bucket
+            "ts": local_iso(row.get("bucket") or row["ts"]),
+            "in": in_sum,
+            "out": out_sum,
+            "total": in_sum + out_sum,
+            "passengers": in_sum + out_sum,
+        })
+    return points
+
+
+def thin_points(points, limit=MAX_POINTS):
+    """点数超上限时等间隔抽稀，保留首尾点。返回 (点数, 是否抽稀)。
+
+    抽稀而不是截断：截断会让曲线只剩前半段，看起来像"后半段没数据"；
+    等间隔抽稀保持整体形状，首尾一定保留，趋势判断不失真。
+    """
+    if len(points) <= limit:
+        return points, False
+    step = (len(points) - 1) / (limit - 1)
+    picked = [points[round(i * step)] for i in range(limit)]
+    return picked, True
+
+
+def trunc_fn(granularity):
+    """按粒度选聚合函数。秒级不用 Trunc——表里本来就是每秒一行。"""
+    if granularity == "minute":
+        return TruncMinute
+    if granularity == "hour":
+        return TruncHour
+    return None
+
+
+def fetch_series(since, until, station_id, line_id, granularity):
+    """按时间区间查序列并按粒度聚合。
+
+    先按 ts 分桶求和，再把 in/out 一起带出来：方向筛选放在 Python 里做，
+    避免为三种 direction 拼三条 SQL——口径只有一处，不会各写一遍。
+    """
+    rows = MetricWindow.objects.filter(ts__gte=since, ts__lte=until)
+    if station_id:
+        rows = rows.filter(station_id=station_id)
+    if line_id:
+        members = stations_of_line(line_id)
+        if not members:
+            return []
+        rows = rows.filter(station_id__in=members)
+
+    fn = trunc_fn(granularity)
+    key = "bucket" if fn else "ts"
+    if fn:
+        rows = rows.annotate(bucket=fn("ts", tzinfo=timezone.get_current_timezone()))
+    return list(
+        rows.values(key)
+        .annotate(
+            passengers=Sum("passengers"),
+            in_p=Sum("in_passengers"),
+            out_p=Sum("out_passengers"),
+        )
+        .order_by(key)
+    )
 
 
 def series(request):
-    """历史序列，契约 4.2。不传 station_id 就按时间戳汇总全部站点。"""
-    minutes, error = int_param(request, "minutes", DEFAULT_MINUTES, 1, MAX_MINUTES)
+    """历史序列，契约 4.2。v1.3 扩参，不传新参数时行为与 v1.2 一致。"""
+    since, until, error = resolve_window(request)
+    if error:
+        return error
+
+    direction, error = choice_param(request, "direction", DIRECTIONS, "all")
+    if error:
+        return error
+    granularity, error = choice_param(
+        request, "granularity", GRANULARITIES, DEFAULT_GRANULARITY
+    )
     if error:
         return error
 
     station_id = request.GET.get("station_id") or None
-    since = timezone.now() - timedelta(minutes=minutes)
+    line_id = request.GET.get("line_id") or None
 
     def fetch():
-        rows = MetricWindow.objects.filter(ts__gte=since)
-        if station_id:
-            rows = rows.filter(station_id=station_id)
-        rows = rows.values("ts").annotate(passengers=Sum("passengers")).order_by("ts")
-        return collect_points(rows)
+        rows = fetch_series(since, until, station_id, line_id, granularity)
+        return thin_points(collect_points(rows, direction))
 
-    points = query_rows(fetch, [])
-    return json_response({"station_id": station_id, "points": points})
+    points, truncated = query_rows(fetch, ([], False))
+    return json_response({
+        "station_id": station_id,
+        "line_id": line_id,
+        "direction": direction,
+        "granularity": granularity,
+        "truncated": truncated,
+        "points": points,
+    })
+
+
+def fetch_rank(since, until, line_id, direction, top):
+    """按站聚合最近一段时间的客流，按所选方向降序取前 N。"""
+    rows = MetricWindow.objects.filter(ts__gte=since, ts__lte=until)
+    if line_id:
+        members = stations_of_line(line_id)
+        if not members:
+            return []
+        rows = rows.filter(station_id__in=members)
+
+    rows = rows.values("station_id").annotate(
+        passengers=Sum("passengers"),
+        in_p=Sum("in_passengers"),
+        out_p=Sum("out_passengers"),
+    )
+    # 排序必须跟着"实际展示的那个数"走，不能直接 order_by("-in_p")：
+    # in/out 两列在计算端双写之前全是 0，SQL 按 0 排序结果不确定，
+    # 会出现榜单第一名 300、第三名 400 这种和数字自相矛盾的顺序。
+    # 站点数很少，取全量后在 Python 里按算出来的值排，口径只有一处。
+    scored = []
+    for row in rows:
+        in_sum, out_sum = direction_sums(
+            row["in_p"] or 0, row["out_p"] or 0, row["passengers"] or 0, direction
+        )
+        key = {"in": in_sum, "out": out_sum}.get(direction, in_sum + out_sum)
+        scored.append((key, row["station_id"], in_sum, out_sum))
+    # 客流相同时按站点编码升序，保证同一份数据每次请求名次一致
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    return [
+        {"station_id": sid, "in": in_sum, "out": out_sum, "passengers": in_sum + out_sum}
+        for _, sid, in_sum, out_sum in scored[:top]
+    ]
 
 
 def rank(request):
-    """站点客流排行，契约 4.3。统计窗口固定为最近 5 分钟。"""
+    """站点客流排行，契约 4.3。默认仍为最近 5 分钟。"""
     top, error = int_param(request, "top", DEFAULT_TOP, 1, MAX_TOP)
     if error:
         return error
+    minutes, error = int_param(request, "minutes", DEFAULT_MINUTES, 1, MAX_MINUTES)
+    if error:
+        return error
+    direction, error = choice_param(request, "direction", DIRECTIONS, "all")
+    if error:
+        return error
 
-    since = timezone.now() - timedelta(minutes=RANK_MINUTES)
+    line_id = request.GET.get("line_id") or None
+    now = timezone.now()
+    since = now - timedelta(minutes=minutes)
+
+    rows = query_rows(lambda: fetch_rank(since, now, line_id, direction, top), [])
+    return json_response({"top": rows})
+
+
+def today_start():
+    """今日统计起点：项目时区当天 0 点。契约 4.4 要求必须注明起点。
+
+    不是"最近 24 小时"：演示时"今日累计"要能对上报表，
+    跨天滚动的时间窗在 0 点附近会给出一个和昨天混在一起的数。
+    """
+    return timezone.localtime(timezone.now()).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+
+
+def fetch_today(since):
+    """一次分组查询拿到今日全部聚合，避免为每个指标各扫一遍表。
+
+    按站分组后，总量、分线、TopN 都能在 Python 里加出来；
+    多查几次的代价是同一个区间被扫多遍，数据量大时明显。
+    """
+    return list(
+        MetricWindow.objects.filter(ts__gte=since)
+        .values("station_id")
+        .annotate(
+            passengers=Sum("passengers"),
+            in_p=Sum("in_passengers"),
+            out_p=Sum("out_passengers"),
+            late=Sum("late_count"),
+            rows=Count("id"),
+        )
+    )
+
+
+def build_today(rows, since, now):
+    """把分组结果拼成契约 4.4 的响应体。"""
+    in_sum, out_sum = direction_sums(
+        sum(r["in_p"] or 0 for r in rows),
+        sum(r["out_p"] or 0 for r in rows),
+        sum(r["passengers"] or 0 for r in rows),
+        "all",
+    )
+    return {
+        "date": since.strftime("%Y-%m-%d"),
+        "since": local_iso(since),
+        # updated_at 也要本地时区：和 since、points[].ts 混着用两种时区，
+        # 前端算"数据延迟几秒"会差 8 小时
+        "updated_at": local_iso(now),
+        "total": in_sum + out_sum,
+        "in": in_sum,
+        "out": out_sum,
+        "net": in_sum - out_sum,
+        "peak": today_peak(since),
+        "lines": today_lines(rows),
+        "top_stations": today_top(rows),
+        "quality": {
+            "late_count": sum(r["late"] or 0 for r in rows),
+            "rows": sum(r["rows"] or 0 for r in rows),
+        },
+    }
+
+
+def today_peak(since):
+    """今日单窗口最大乘降量及发生时刻。窗口是 1 秒，先按 ts 汇总再取最大。
+
+    走 query_rows 而不是直接查：数据库挂掉时这里若抛 DatabaseError，
+    整个 /api/summary/today 会变 500，而契约要求无数据也给 0 值结构。
+    """
 
     def fetch():
-        rows = (
+        row = (
             MetricWindow.objects.filter(ts__gte=since)
-            .values("station_id")
-            .annotate(passengers=Sum("passengers"))
-            .order_by("-passengers")[:top]
+            .values("ts")
+            .annotate(total=Sum("passengers"))
+            .order_by("-total")
+            .first()
         )
-        # 契约要求人数是整数：Sum 在空集上是 None，这里一并兜成 0
-        return [
-            {"station_id": row["station_id"], "passengers": row["passengers"] or 0}
-            for row in rows
-        ]
+        if not row:
+            return {"ts": None, "total": 0}
+        return {"ts": local_iso(row["ts"]), "total": row["total"] or 0}
 
-    return json_response({"top": query_rows(fetch, [])})
+    return query_rows(fetch, {"ts": None, "total": 0})
+
+
+def today_lines(rows):
+    """按线路汇总。metric_window 没有 line_id 列，映射关系只存在站点表里。"""
+    mapping = build_line_map()
+    grouped = {}
+    for row in rows:
+        line_id = mapping.get(row["station_id"])
+        bucket = grouped.setdefault(
+            line_id, {"line_id": line_id, "in": 0, "out": 0, "total": 0}
+        )
+        in_sum, out_sum = direction_sums(
+            row["in_p"] or 0, row["out_p"] or 0, row["passengers"] or 0, "all"
+        )
+        bucket["in"] += in_sum
+        bucket["out"] += out_sum
+        bucket["total"] += in_sum + out_sum
+    return sorted(grouped.values(), key=lambda b: (-b["total"], b["line_id"] or ""))
+
+
+def today_top(rows, limit=TOP_STATIONS):
+    """今日分站 TopN。"""
+    result = []
+    for row in rows:
+        in_sum, out_sum = direction_sums(
+            row["in_p"] or 0, row["out_p"] or 0, row["passengers"] or 0, "all"
+        )
+        result.append({
+            "station_id": row["station_id"],
+            "in": in_sum,
+            "out": out_sum,
+            "total": in_sum + out_sum,
+        })
+    result.sort(key=lambda item: (-item["total"], item["station_id"]))
+    return result[:limit]
+
+
+def summary_today(request):
+    """今日汇总，契约 4.4。无数据时返回 0 值结构而不是 404。"""
+    since = today_start()
+    now = timezone.now()
+    rows = query_rows(lambda: fetch_today(since), [])
+    return json_response(build_today(rows, since, now))
+
+
+def stations(request):
+    """站点元数据，契约 4.5。直接读采集表的实时内容，不做复制与缓存。"""
+    return json_response(stations_payload())
 
 
 def not_found(request, exception=None):
