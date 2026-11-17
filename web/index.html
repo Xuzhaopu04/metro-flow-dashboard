@@ -9,85 +9,81 @@
   <script src="https://registry.npmmirror.com/echarts/5.5.1/files/dist/echarts.min.js"></script>
   <style>
     :root {
-      --bg: #0b1220; --panel: #131d2e; --line: #22314a;
-      --text: #e2e8f0; --muted: #7c8ba1;
-      --accent: #38bdf8; --violet: #a78bfa; --ok: #22c55e; --warn: #f59e0b; --alert: #ef4444;
+      --bg: #f5f6f4; --panel: #ffffff;
+      --line: #e8e8e4; --line-soft: #f1f1ee;
+      --text: #14161a; --muted: #8b9098; --faint: #a8adb5;
+      --accent: #2f6bff; --accent-soft: #eef3ff;
+      --violet: #8b5cf6; --ok: #12a150; --warn: #d98b00; --alert: #e5484d;
+      --num: "Georgia", "Times New Roman", "Songti SC", serif;
+      --shadow: 0 1px 2px rgba(20,22,26,.04), 0 14px 30px -24px rgba(20,22,26,.30);
     }
     * { box-sizing: border-box; }
-    /* 顶部一层很淡的径向光，避免纯色背景显得像半成品；fixed 让滚动时不出接缝 */
-    body { margin: 0; color: var(--text); font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
-           background-color: var(--bg);
-           background-image: radial-gradient(1100px 520px at 50% -8%, #16253c 0%, rgba(11,18,32,0) 62%);
-           background-attachment: fixed; }
-    /* 值班室是 1920 起的屏，不再限死 1400，改用左右留白随视口伸缩 */
+    body { margin: 0; color: var(--text); background: var(--bg);
+           font-family: "Inter", "Helvetica Neue", "Microsoft YaHei", system-ui, sans-serif;
+           -webkit-font-smoothing: antialiased; }
     #app { width: 100%; max-width: 1920px; margin: 0 auto;
-           padding: clamp(14px, 1.4vw, 26px) clamp(16px, 1.6vw, 30px) 22px; }
+           padding: clamp(16px, 1.6vw, 30px) clamp(18px, 1.8vw, 36px) 24px; }
 
     header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
     .brand { display: flex; align-items: center; gap: 12px; }
-    .brand .bar { width: 4px; height: 32px; border-radius: 2px;
-                  background: linear-gradient(180deg, var(--accent), rgba(56,189,248,0)); }
-    .brand h1 { font-size: 21px; font-weight: 600; margin: 0; letter-spacing: 1px; }
-    .brand .sub { font-size: 10px; letter-spacing: 3px; color: var(--muted); margin-top: 3px; }
-    .head-right { display: flex; align-items: center; gap: 12px; }
-    .clock { font-size: 20px; letter-spacing: 1px; font-variant-numeric: tabular-nums; color: #cbd5e1; }
-    .pill { display: inline-flex; align-items: center; font-size: 12px; color: var(--muted);
-            border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; background: var(--panel); }
-    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
-    .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(34,197,94,.12); }
-    .dot.bad { background: var(--alert); animation: blink 1s steps(2, start) infinite; }
-    @keyframes blink { 50% { opacity: .25; } }
+    /* 品牌标记：圆角方块里三条白线，对应“线路”这件事 */
+    .brand .bar { width: 32px; height: 32px; border-radius: 10px; background: #14161a; position: relative; }
+    .brand .bar::before { content: ""; position: absolute; inset: 9px 8px; border-radius: 2px;
+                          background: repeating-linear-gradient(180deg, #fff 0 3px, transparent 3px 7px); }
+    .brand h1 { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -.2px; }
+    .brand .sub { font-size: 9.5px; letter-spacing: 2.2px; color: var(--faint); margin-top: 4px; text-transform: uppercase; }
+    .head-right { display: flex; align-items: center; gap: 8px; }
+    .clock { font-size: 13px; color: #6b7280; font-variant-numeric: tabular-nums; margin-right: 4px; }
+    .pill { display: inline-flex; align-items: center; font-size: 12px; color: #5f6570;
+            border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: #fff; }
+    .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; }
+    .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(18,161,80,.12); }
+    .dot.bad { background: var(--alert); box-shadow: 0 0 0 3px rgba(229,72,77,.12);
+               animation: blink 1.4s steps(2, start) infinite; }
+    @keyframes blink { 50% { opacity: .3; } }
 
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 18px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px; margin-top: 20px; }
     .kpi { position: relative; background: var(--panel); border: 1px solid var(--line);
-           border-radius: 10px; padding: 12px 16px 14px; overflow: hidden; }
-    /* 左侧色条用来区分指标类别，比整块染色克制 */
-    .kpi::before { content: ""; position: absolute; left: 0; top: 13px; bottom: 13px; width: 3px;
-                   border-radius: 2px; background: var(--accent); opacity: .8; }
-    .kpi .k { font-size: 12px; color: var(--muted); }
-    /* 字号跟着屏宽走：笔记本上不至于挤，1920 大屏上数字也够醒目 */
-    .kpi .v { font-size: clamp(26px, 1.8vw, 36px); font-weight: 600; margin-top: 5px; color: #f8fafc;
-              font-variant-numeric: tabular-nums; line-height: 1.15; }
-    .kpi .v small { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 4px; }
-    .kpi.accent .v { color: var(--accent); }
-    .kpi.violet::before { background: var(--violet); }
-    .kpi.violet .v { color: var(--violet); }
-    .kpi.warn::before { background: var(--warn); }
-    .kpi.warn .v { color: var(--warn); }
-    .kpi.red::before { background: var(--alert); }
-    .kpi.red .v { color: #f87171; }
-    /* 告警时客流卡片同步变红，不用只看顶部横幅 */
-    .kpi.alerting { border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.07); }
-    .kpi.alerting .v { color: #fca5a5; }
-    .kpi.alerting::before { background: var(--alert); }
-    /* 阈值是配置项，不该和业务指标同权重，字号和色条都压一档 */
-    .kpi.dim .v { font-size: clamp(20px, 1.3vw, 24px); color: #94a3b8; }
-    .kpi.dim::before { background: #475569; opacity: 1; }
-    .kpi.health .v { font-size: clamp(20px, 1.3vw, 24px); }
+           border-radius: 16px; padding: 16px 18px 18px; box-shadow: var(--shadow); overflow: hidden; }
+    .kpi .k { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #6b7280; }
+    /* 用小圆点区分指标类别，比整块染色更克制 */
+    .kpi .k::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+    .kpi .v { font-family: var(--num); font-size: clamp(36px, 2.4vw, 46px); font-weight: 500;
+              letter-spacing: -.02em; color: var(--text); margin-top: 12px; line-height: 1.02;
+              font-variant-numeric: tabular-nums; }
+    .kpi .v small { font-family: "Inter", "Microsoft YaHei", system-ui, sans-serif;
+                    font-size: 12px; font-weight: 400; color: var(--faint); margin-left: 7px; letter-spacing: 0; }
+    .kpi .foot { margin-top: 10px; font-size: 11.5px; color: var(--faint); }
+    .kpi.accent .v { color: var(--text); }
+    .kpi.violet .k::before { background: var(--violet); }
+    .kpi.warn .k::before, .kpi.health .k::before { background: var(--warn); }
+    .kpi.red .k::before, .kpi.alerting .k::before { background: var(--alert); }
+    /* 告警用淡红底而不是整张卡染红 */
+    .kpi.alerting { background: #fff7f6; border-color: #ffdad6; }
+    .kpi.alerting .v { color: #c92a2a; }
+    .kpi.dim { background: #fbfbfa; }
+    .kpi.dim .k::before { background: #c9ccd2; }
+    .kpi.dim .v { font-size: clamp(28px, 1.7vw, 34px); color: #5f6570; }
+    .kpi.health .v { font-size: clamp(26px, 1.6vw, 32px); }
     .kpi.health .v .late { color: var(--warn); }
-    .kpi.health .v .invalid { color: #f87171; }
-    .kpi.health .v .sep { color: #3b4a60; margin: 0 7px; }
-    .spark { display: block; margin-top: 6px; overflow: visible; }
+    .kpi.health .v .invalid { color: var(--alert); }
+    .kpi.health .v .sep { color: #d5d7db; margin: 0 8px; font-family: sans-serif; }
+    .spark { display: block; margin-top: 10px; overflow: visible; }
 
     .alert { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px;
-             padding: 10px 16px; border-radius: 8px; font-size: 13px; color: #fca5a5;
-             background: rgba(239,68,68,.13); border: 1px solid rgba(239,68,68,.55);
-             animation: breathe 2.4s ease-in-out infinite; }
-    .alert b { color: #fff; font-variant-numeric: tabular-nums; }
-    .alert .sep { color: rgba(252,165,165,.35); margin: 0 4px; }
-    .alert .dot { margin-right: 10px; }
-    @keyframes breathe {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.32); }
-      50% { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
-    }
+             padding: 12px 16px; border-radius: 14px; font-size: 12.5px; color: #b42318;
+             background: #fff7f6; border: 1px solid #ffdad6; }
+    .alert b { color: #8f1d16; font-variant-numeric: tabular-nums; }
+    .alert .sep { color: #f0bdb8; margin: 0 4px; }
+    .alert .dot { margin-right: 8px; }
 
     .grid { display: grid; grid-template-columns: 330px minmax(0, 1fr) 340px;
-            gap: 16px; margin-top: 16px; }
+            gap: 14px; margin-top: 14px; }
     @media (max-width: 1500px) {
       .grid { grid-template-columns: minmax(0, 1fr) 330px; }
-      /* 线网图在中等宽度独占一行，柱子仍然留够宽度 */
       .flow-card { grid-column: 1 / -1; }
-      .flow-card .flow-wrap { height: 200px; }
+      .flow-card .flow-wrap { flex: none; height: 220px; }
     }
     @media (max-width: 1080px) {
       .grid { grid-template-columns: minmax(0, 1fr); }
@@ -96,127 +92,126 @@
       .clock { display: none; }
     }
 
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
-    /* 排行内容比左侧柱状图短，让脚注沉到底部，右侧卡片不会拖出一大块空白 */
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+            padding: 18px 20px; box-shadow: var(--shadow); }
     .rank-card { display: flex; flex-direction: column; }
-    .rank-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line);
-                 font-size: 11px; color: #5d6b80; line-height: 1.6; }
+    .rank-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line-soft);
+                 font-size: 11px; color: var(--faint); line-height: 1.7; }
     .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .card h2 { font-size: 13px; font-weight: 500; color: var(--muted); margin: 0; letter-spacing: .5px; }
-    .hint { font-size: 11px; color: #5d6b80; }
-    .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-top: 7px; flex-wrap: wrap; }
-    .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+    .card h2 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0; letter-spacing: -.1px; }
+    .hint { font-size: 11px; color: var(--faint); font-weight: 400; }
+    .legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 7px; flex-wrap: wrap; }
+    .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
 
-    .toolbar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-    .tab { padding: 4px 12px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer;
-           font-size: 12px; color: var(--muted); background: transparent; transition: all .15s; }
-    .tab:hover { color: #cbd5e1; border-color: #33455f; }
-    .tab.on { color: var(--accent); border-color: var(--accent); background: rgba(56,189,248,.08); }
+    /* 分段控件：比一排描边按钮更轻 */
+    .toolbar { display: flex; gap: 2px; flex-wrap: wrap; justify-content: flex-end;
+               background: #f4f5f3; border-radius: 10px; padding: 3px; }
+    .tab { padding: 5px 12px; border: none; border-radius: 8px; cursor: pointer; font-family: inherit;
+           font-size: 12px; color: #6b7280; background: transparent; transition: background .15s, color .15s; }
+    .tab:hover { color: var(--text); }
+    .tab.on { color: var(--text); background: #fff; box-shadow: 0 1px 2px rgba(20,22,26,.10); }
 
-    /* 图表和空状态叠在同一个容器里，数据没到时给提示而不是一片空白 */
-    .chart-wrap { position: relative; margin-top: 6px; }
+    .chart-wrap { position: relative; margin-top: 10px; }
     .chart { width: 100%; height: 316px; }
     .chart.slim { height: 198px; }
     .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-             font-size: 13px; color: var(--muted); pointer-events: none; }
+             font-size: 12.5px; color: var(--faint); pointer-events: none; }
 
-    /* 线网图直接用 SVG：站点只有个位数，够用且不用再引一个图表实例 */
     .flow-card { display: flex; flex-direction: column; }
     .flow-wrap { position: relative; flex: 1; min-height: 0; margin-top: 6px; }
-    .flow-wrap svg { width: 100%; height: 100%; display: block; }
-    .flow-note { font-size: 11px; color: #5d6b80; text-align: center; }
+    /* SVG 绝对定位：否则它的固有高度会撑高 grid 行，2 列布局下线网图会被拉到整屏 */
+    .flow-wrap svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .flow-note { font-size: 11px; color: var(--faint); text-align: center; }
 
-    ol.rank { list-style: none; margin: 8px 0 0; padding: 0; }
+    ol.rank { list-style: none; margin: 10px 0 0; padding: 0; }
     ol.rank li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px;
-                 align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line);
+                 align-items: center; padding: 10px 8px; border-radius: 10px;
                  font-size: 13px; cursor: pointer; transition: background .15s; }
-    ol.rank li:last-child { border-bottom: none; }
-    ol.rank li:hover { background: rgba(56,189,248,.05); }
-    /* 选中项用左侧亮条标记，和柱状图的高亮是同一件事的两种表达 */
-    ol.rank li.sel { background: rgba(56,189,248,.09); box-shadow: inset 2px 0 0 var(--accent); padding-left: 8px; }
-    .badge { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center;
-             font-size: 11px; color: var(--muted); background: rgba(255,255,255,.05); }
-    .badge.top1 { color: var(--accent); background: rgba(56,189,248,.15); }
-    .badge.top2 { color: var(--violet); background: rgba(167,139,250,.15); }
-    .badge.top3 { color: var(--warn); background: rgba(245,158,11,.15); }
+    ol.rank li:hover { background: #fafaf8; }
+    ol.rank li.sel { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+    .badge { width: 20px; height: 20px; border-radius: 7px; display: grid; place-items: center;
+             font-size: 11px; color: #6b7280; background: #f4f5f3; }
+    .badge.top1 { color: var(--accent); background: #eef3ff; }
+    .badge.top2 { color: var(--violet); background: #f3efff; }
+    .badge.top3 { color: #a86800; background: #fff4e0; }
     .rank-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-    .rank-name { color: #cbd5e1; }
-    .rank-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,.06); overflow: hidden; }
+    .rank-name { color: var(--text); }
+    .rank-bar { height: 4px; border-radius: 2px; background: #f1f2ef; overflow: hidden; }
     .rank-bar > span { display: block; height: 100%; border-radius: 2px;
-                       background: linear-gradient(90deg, var(--accent), var(--violet)); transition: width .45s ease; }
-    .rank-num { color: var(--accent); font-variant-numeric: tabular-nums; }
-    .rank-empty { display: block; color: var(--muted); font-size: 13px; padding: 18px 0; grid-template-columns: unset; }
+                       background: var(--accent); transition: width .45s ease; }
+    .rank-num { color: var(--text); font-family: var(--num); font-size: 14px; font-variant-numeric: tabular-nums; }
+    .rank-empty { display: block; color: var(--muted); font-size: 13px; padding: 18px 8px; grid-template-columns: unset; }
 
-    footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px;
-             font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+    footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px;
+             padding-top: 14px; border-top: 1px solid var(--line);
+             font-size: 11.5px; color: var(--faint); flex-wrap: wrap; }
     .fresh.warn { color: var(--warn); }
     .fresh.bad { color: var(--alert); }
 
-    /* ---- 帮助抽屉：页面广度放在这里，首屏只多一个按钮 ---- */
-    .btn { cursor: pointer; font-family: inherit; transition: color .15s, border-color .15s; }
-    .btn:hover { color: #cbd5e1; border-color: #33455f; }
+    /* ---- 帮助抽屉：同一套浅色语言，标题用下划线标签页 ---- */
+    .btn { cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s; }
+    .btn:hover { background: #fafaf8; border-color: #dcdcd6; }
     .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-    .drawer-mask { position: fixed; inset: 0; z-index: 40; background: rgba(4,8,16,.62); }
+    .drawer-mask { position: fixed; inset: 0; z-index: 40; background: rgba(20,22,26,.28); }
     .drawer { position: fixed; top: 0; right: 0; z-index: 41; height: 100vh;
               width: min(520px, 94vw); display: flex; flex-direction: column;
-              background: #0f1828; border-left: 1px solid var(--line);
-              box-shadow: -30px 0 70px rgba(0,0,0,.55); }
-    .drawer-head { padding: 16px 20px 0; }
-    .drawer-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
-    .drawer-close { position: absolute; top: 14px; right: 16px; width: 28px; height: 28px;
-                    display: grid; place-items: center; border-radius: 6px; border: 1px solid var(--line);
-                    background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; }
-    .drawer-close:hover { color: var(--text); border-color: #33455f; }
-    .drawer-tabs { display: flex; gap: 6px; padding: 12px 20px 0; flex-wrap: wrap;
-                   border-bottom: 1px solid var(--line); }
-    .drawer-tabs .tab { border-bottom-left-radius: 0; border-bottom-right-radius: 0;
-                        border-bottom-color: transparent; padding: 6px 11px; }
-    .drawer-tabs .tab.on { border-bottom-color: #0f1828; background: rgba(56,189,248,.1); }
-    .drawer-body { flex: 1; overflow: auto; padding: 14px 20px 24px; }
-    .drawer-body section + section { margin-top: 18px; }
-    .drawer-body h4 { margin: 18px 0 8px; font-size: 12px; font-weight: 500; color: #7c8ba1; }
-    .lead { font-size: 12.5px; color: #b6c3d4; line-height: 1.7; margin: 0 0 12px; }
-    .muted { margin-top: 14px; font-size: 11.5px; color: #7c8ba1; line-height: 1.7; }
-    .doc p { margin: 0 0 8px; font-size: 12px; line-height: 1.75; color: #b6c3d4; }
-    .doc table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .doc th { text-align: left; font-weight: 500; color: var(--muted); white-space: nowrap;
-              padding: 6px 8px; border-bottom: 1px solid var(--line); }
-    .doc td { padding: 7px 8px; border-bottom: 1px solid rgba(34,49,74,.65);
-              color: #b6c3d4; vertical-align: top; line-height: 1.6; }
+              background: #fff; border-left: 1px solid var(--line);
+              box-shadow: -24px 0 60px rgba(20,22,26,.14); }
+    .drawer-head { padding: 20px 24px 0; display: flex; align-items: flex-start; justify-content: space-between; }
+    .drawer-head h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+    .drawer-close { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px;
+                    border: 1px solid var(--line); background: #fff; color: var(--muted);
+                    cursor: pointer; font-size: 16px; line-height: 1; }
+    .drawer-close:hover { color: var(--text); background: #fafaf8; }
+    .drawer-tabs { display: flex; gap: 20px; padding: 16px 24px 0; border-bottom: 1px solid var(--line); }
+    .drawer-tabs .tab { border-radius: 0; background: transparent; padding: 8px 0 10px; font-size: 12.5px;
+                        color: var(--muted); box-shadow: none; border-bottom: 2px solid transparent; }
+    .drawer-tabs .tab:hover { color: var(--text); }
+    .drawer-tabs .tab.on { color: var(--text); font-weight: 500; border-bottom-color: var(--text); background: transparent; }
+    .drawer-body { flex: 1; overflow: auto; padding: 18px 24px 28px; }
+    .drawer-body h4 { margin: 20px 0 10px; font-size: 11.5px; font-weight: 500;
+                      color: var(--faint); letter-spacing: .06em; }
+    .lead { font-size: 13px; color: #4b5563; line-height: 1.7; margin: 0 0 14px; }
+    .muted { margin-top: 16px; font-size: 11.5px; color: var(--muted); line-height: 1.7; }
+    .doc p { margin: 0 0 8px; font-size: 12.5px; line-height: 1.75; color: #4b5563; }
+    .doc table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .doc th { text-align: left; font-weight: 500; color: var(--faint); white-space: nowrap;
+              padding: 7px 8px; border-bottom: 1px solid var(--line); font-size: 11.5px; }
+    .doc td { padding: 9px 8px; border-bottom: 1px solid var(--line-soft);
+              color: #4b5563; vertical-align: top; line-height: 1.65; }
     .doc tr:last-child td { border-bottom: none; }
+    .doc td:first-child { color: var(--text); white-space: nowrap; }
     .doc code { font-family: ui-monospace, Consolas, monospace; font-size: 11px;
-                color: #8fd3f4; background: rgba(56,189,248,.08); padding: 1px 5px; border-radius: 3px; }
-    .doc .note { margin-top: 10px; padding: 9px 12px; border-left: 2px solid var(--warn);
-                 background: rgba(245,158,11,.07); font-size: 11.5px; color: #d9c6a6; line-height: 1.7; }
+                color: #2b57c9; background: #f4f5f3; padding: 2px 6px; border-radius: 5px; }
+    .doc .note { margin-top: 14px; padding: 10px 13px; border-radius: 10px;
+                 background: #fffaeb; font-size: 11.5px; color: #7a5a12; line-height: 1.7; }
 
-    .steps { list-style: none; margin: 0; padding: 0 0 0 9px; }
+    .steps { list-style: none; margin: 0; padding: 0 0 0 9px; counter-reset: step; }
     .steps li { position: relative; padding: 0 0 14px 26px; margin-left: 9px;
-                border-left: 1px solid var(--line); font-size: 12px; line-height: 1.7; color: #b6c3d4; }
+                border-left: 1px solid var(--line); font-size: 12.5px; line-height: 1.7; color: #4b5563; }
     .steps li:last-child { border-left-color: transparent; padding-bottom: 0; }
     .steps li::before { counter-increment: step; content: counter(step);
                         position: absolute; left: -10px; top: -1px; width: 19px; height: 19px;
-                        border-radius: 50%; background: #182843; border: 1px solid var(--line);
+                        border-radius: 50%; background: #fff; border: 1px solid #d8dcff;
                         color: var(--accent); font-size: 10px; display: grid; place-items: center; }
-    .steps { counter-reset: step; }
-    .steps strong { color: #dfe9f5; font-weight: 500; }
+    .steps strong { color: var(--text); font-weight: 600; }
 
-    .links { display: flex; flex-direction: column; gap: 8px; }
-    .links a, .links .plain { display: flex; align-items: baseline; gap: 8px; font-size: 12px;
-                              color: #9dc8e6; text-decoration: none; }
-    .links a:hover { color: var(--accent); text-decoration: underline; }
+    .links { display: flex; flex-direction: column; gap: 2px; }
+    .links a, .links .plain { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px;
+                              color: #2b57c9; text-decoration: none; padding: 7px 8px; border-radius: 8px; }
+    .links a:hover { background: #f5f7ff; }
     .links .plain { color: var(--muted); }
-    .links em { font-style: normal; font-size: 11px; color: #5d6b80; margin-left: auto; text-align: right; }
+    .links em { font-style: normal; font-size: 11px; color: var(--faint); margin-left: auto; text-align: right; }
 
-    .faq details { border-bottom: 1px solid rgba(34,49,74,.65); padding: 8px 0; }
+    .faq details { border-bottom: 1px solid var(--line-soft); padding: 10px 2px; }
     .faq details:last-child { border-bottom: none; }
-    .faq summary { cursor: pointer; font-size: 12.5px; color: #d3deea; list-style: none; }
+    .faq summary { cursor: pointer; font-size: 12.5px; color: var(--text); list-style: none; }
     .faq summary::-webkit-details-marker { display: none; }
-    .faq summary::before { content: "+"; display: inline-block; width: 14px; color: var(--accent); }
+    .faq summary::before { content: "+"; display: inline-block; width: 16px; color: var(--faint); }
     .faq details[open] summary::before { content: "−"; }
-    .faq p { margin: 8px 0 2px 14px; font-size: 12px; color: #a9b8ca; line-height: 1.75; }
+    .faq p { margin: 8px 0 2px 16px; font-size: 12px; color: var(--muted); line-height: 1.75; }
 
-    /* 锚点跳转时给固定头部留一点余量 */
     #kpi, #flow, #bars, #rank, #trend { scroll-margin-top: 12px; }
   </style>
 </head>
@@ -256,9 +251,9 @@
       <div class="k">数据健康</div>
       <div class="v"><span class="late">{{ lateCount }}</span><small>迟到</small><span class="sep">·</span><span class="invalid">{{ invalidCount }}</span><small>非法</small></div>
       <svg class="spark" width="100%" height="30" viewBox="0 0 120 30" preserveAspectRatio="none" v-if="health.length > 1">
-        <polyline :points="spark.late" fill="none" stroke="#f59e0b" stroke-width="1.6"
+        <polyline :points="spark.late" fill="none" stroke="#d98b00" stroke-width="1.6"
                   vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-        <polyline :points="spark.invalid" fill="none" stroke="#ef4444" stroke-width="1.4"
+        <polyline :points="spark.invalid" fill="none" stroke="#e5484d" stroke-width="1.4"
                   stroke-dasharray="3 2" vector-effect="non-scaling-stroke"/>
       </svg>
       <div class="foot hint">近 {{ health.length }} 秒 · 橙迟到 红非法</div>
@@ -284,21 +279,20 @@
         <svg viewBox="0 0 360 300" preserveAspectRatio="xMidYMid meet" v-if="flowLines.length">
           <g v-for="ln in flowLines" :key="ln.key">
             <line :x1="26" :y1="ln.y" :x2="334" :y2="ln.y"
-                  :stroke="ln.color" stroke-width="3" stroke-linecap="round" opacity=".28"/>
-            <text x="8" :y="ln.y + 4" :fill="ln.color" font-size="11">{{ ln.short }}</text>
+                  stroke="#e9eae6" stroke-width="6" stroke-linecap="round"/>
+            <text x="4" :y="ln.y + 4" fill="#a8adb5" font-size="10">{{ ln.short }}</text>
           </g>
           <g v-for="n in flowNodes" :key="n.id">
-            <circle :cx="n.x" :cy="n.y" :r="n.r"
-                    :fill="n.color" fill-opacity=".18" :stroke="n.color" stroke-width="2"/>
-            <text :x="n.x" :y="n.y + 4" fill="#e2e8f0" font-size="11"
+            <circle :cx="n.x" :cy="n.y" :r="n.r" fill="#ffffff" :stroke="n.color" stroke-width="2"/>
+            <text :x="n.x" :y="n.y + 4" fill="#14161a" font-size="11" font-weight="600"
                   text-anchor="middle">{{ n.passengers }}</text>
-            <text :x="n.x" :y="n.y + n.r + 14" fill="#7c8ba1" font-size="10"
+            <text :x="n.x" :y="n.y + n.r + 14" fill="#8b9098" font-size="10"
                   text-anchor="middle">{{ n.id }}</text>
           </g>
         </svg>
         <div class="empty" v-if="!flowNodes.length">{{ online ? '等待数据…' : '连接中断' }}</div>
       </div>
-      <div class="flow-note" v-if="flowNodes.length">线宽=线路 · 圆大小=当前秒客流</div>
+      <div class="flow-note" v-if="flowNodes.length">颜色区分线路 · 圆大小=当前秒客流</div>
     </section>
 
     <section class="card" id="bars">
@@ -306,9 +300,9 @@
         <div>
           <h2>各站实时客流</h2>
           <div class="legend" v-if="line === 'all'">
-            <span><i style="background:#38bdf8"></i>1 号线</span>
-            <span><i style="background:#a78bfa"></i>2 号线</span>
-            <span style="color:#4d5a70">标签上方为较上一秒增减</span>
+            <span><i style="background:#2f6bff"></i>1 号线</span>
+            <span><i style="background:#8b5cf6"></i>2 号线</span>
+            <span style="color:#a8adb5">标签上方为较上一秒增减</span>
           </div>
         </div>
         <div class="toolbar">
@@ -452,17 +446,18 @@ const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted } = Vu
 const SNAPSHOT_MS = 1000;       // 快照刷新间隔
 const HISTORY_MS = 5000;        // 历史与排行刷新间隔，没必要每秒查库
 const HEALTH_LEN = 60;          // 数据健康走势保留最近 60 秒
-const LINE_COLORS = { L1: "#38bdf8", L2: "#a78bfa" };  // 与图例、柱色同一份来源，改色只改这里
+const LINE_COLORS = { L1: "#2f6bff", L2: "#8b5cf6" };  // 与图例、柱色同一份来源，改色只改这里
 const PANEL_TOOLTIP = {
-  backgroundColor: "#0f1a2c", borderColor: "#243349", borderWidth: 1,
-  textStyle: { color: "#e2e8f0", fontSize: 12 }, padding: [8, 12]
+  backgroundColor: "#ffffff", borderColor: "#e8e8e4", borderWidth: 1,
+  textStyle: { color: "#14161a", fontSize: 12 },
+  extraCssText: "box-shadow: 0 8px 24px rgba(20,22,26,.12); border-radius: 10px;", padding: [8, 12]
 };
 const AXIS = {
-  axisLine: { lineStyle: { color: "#243349" } },
+  axisLine: { lineStyle: { color: "#e8e8e4" } },
   axisTick: { show: false },
-  axisLabel: { color: "#7c8ba1", fontSize: 11 }
+  axisLabel: { color: "#9aa0a8", fontSize: 11 }
 };
-const SPLIT_LINE = { lineStyle: { color: "#1c2942", type: "dashed" } };
+const SPLIT_LINE = { lineStyle: { color: "#f1f2ef", type: "solid" } };
 
 function lineName(id) {
   if (id === "L1") return "1 号线";
@@ -557,7 +552,7 @@ createApp({
       return keys.map((key, i) => ({
         key,
         short: key || "—",
-        color: LINE_COLORS[key] || "#38bdf8",
+        color: LINE_COLORS[key] || "#2f6bff",
         y: keys.length > 1 ? 110 + i * gap : 150
       }));
     });
@@ -578,7 +573,7 @@ createApp({
           nodes.push({
             id: s.station_id,
             passengers: s.passengers,
-            color: LINE_COLORS[key] || "#38bdf8",
+            color: LINE_COLORS[key] || "#2f6bff",
             x: rows.length > 1 ? 55 + si * step : 180,
             y: keys.length > 1 ? 110 + li * gap : 150,
             // 半径按开方缩放：面积和客流成正比，小站才不会被大站压没
@@ -692,21 +687,21 @@ createApp({
         type: "scatter", silent: true, symbolSize: 0, tooltip: { show: false }, data,
         label: { show: true, position: "top", offset: [0, -20], fontSize: 10, color, formatter: fmt }
       });
-      return [make(up, "#f87171", p => "+" + p.value[2]),
-              make(down, "#4ade80", p => String(p.value[2]))];
+      return [make(up, "#e5484d", p => "+" + p.value[2]),
+              make(down, "#12a150", p => String(p.value[2]))];
     }
 
     function barsTooltip(rows) {
       return {
         trigger: "axis",
-        axisPointer: { type: "shadow", shadowStyle: { color: "rgba(56,189,248,.06)" } },
+        axisPointer: { type: "shadow", shadowStyle: { color: "rgba(47,107,255,.05)" } },
         ...PANEL_TOOLTIP,
         formatter: items => {
           const row = rows[items[0].dataIndex];
           const dv = deltas[row.station_id] || 0;
           const dvText = dv === 0 ? "持平" : (dv > 0 ? "+" : "") + dv;
           return row.station_id + " · " + lineName(row.line_id) +
-                 "<br/>客流 <b style='color:#38bdf8'>" + row.passengers + "</b> 人次/秒" +
+                 "<br/>客流 <b style='color:#2f6bff'>" + row.passengers + "</b> 人次/秒" +
                  "<br/>较上一秒 <b>" + dvText + "</b>";
         }
       };
@@ -715,13 +710,13 @@ createApp({
     function trendTooltip(points) {
       return {
         trigger: "axis",
-        axisPointer: { type: "line", lineStyle: { color: "rgba(56,189,248,.45)", type: "dashed" } },
+        axisPointer: { type: "line", lineStyle: { color: "rgba(47,107,255,.30)", type: "dashed" } },
         ...PANEL_TOOLTIP,
         formatter: items => {
           const p = points[items[0].dataIndex];
           const who = selected.value || "全部站点";
           return p.ts.slice(11, 19) + " · " + who +
-                 "<br/>客流 <b style='color:#38bdf8'>" + p.passengers + "</b> 人次/秒";
+                 "<br/>客流 <b style='color:#2f6bff'>" + p.passengers + "</b> 人次/秒";
         }
       };
     }
@@ -740,10 +735,10 @@ createApp({
         return {
           value: s.passengers,
           itemStyle: {
-            color: line.value === "all" ? (LINE_COLORS[s.line_id] || "#38bdf8") : "#38bdf8",
-            borderRadius: [4, 4, 0, 0],
+            color: line.value === "all" ? (LINE_COLORS[s.line_id] || "#2f6bff") : "#2f6bff",
+            borderRadius: [6, 6, 0, 0],
             // 选中的站在柱子上加亮边，和右侧排行的选中态对应
-            borderColor: picked ? "#e2e8f0" : "transparent",
+            borderColor: picked ? "#14161a" : "transparent",
             borderWidth: picked ? 2 : 0
           }
         };
@@ -756,14 +751,14 @@ createApp({
         xAxis: { type: "category", data: rows.map(s => s.station_id), ...AXIS },
         yAxis: {
           type: "value", name: "人次/秒", minInterval: 1,
-          nameTextStyle: { color: "#7c8ba1", fontSize: 11 },
+          nameTextStyle: { color: "#a8adb5", fontSize: 11 },
           splitLine: SPLIT_LINE, ...AXIS
         },
         series: [{
           type: "bar",
           barMaxWidth: 46,
           data: data,
-          label: { show: true, position: "top", color: "#94a3b8", fontSize: 11 }
+          label: { show: true, position: "top", color: "#8b9098", fontSize: 11 }
         }, ...deltaSeries(up, down)]
       });
     }
@@ -774,11 +769,11 @@ createApp({
         smooth: true,
         showSymbol: false,
         data: points.map(p => p.passengers),
-        lineStyle: { color: "#38bdf8", width: 2 },
+        lineStyle: { color: "#2f6bff", width: 2.4 },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(56,189,248,.28)" },
-            { offset: 1, color: "rgba(56,189,248,0)" }
+            { offset: 0, color: "rgba(47,107,255,.18)" },
+            { offset: 1, color: "rgba(47,107,255,0)" }
           ])
         }
       };
@@ -786,8 +781,8 @@ createApp({
       if (threshold.value > 0) {
         series.markLine = {
           silent: true, symbol: "none",
-          label: { formatter: "阈值 " + threshold.value, color: "#f87171", fontSize: 11, position: "insideEndTop" },
-          lineStyle: { color: "rgba(239,68,68,.55)", type: "dashed" },
+          label: { formatter: "阈值 " + threshold.value, color: "#e5484d", fontSize: 11, position: "insideEndTop" },
+          lineStyle: { color: "rgba(229,72,77,.45)", type: "dashed" },
           data: [{ yAxis: threshold.value }]
         };
       }
@@ -809,7 +804,7 @@ createApp({
         },
         yAxis: {
           type: "value", name: "人次/秒", minInterval: 1,
-          nameTextStyle: { color: "#7c8ba1", fontSize: 11 },
+          nameTextStyle: { color: "#a8adb5", fontSize: 11 },
           splitLine: SPLIT_LINE, ...AXIS
         },
         series: [trendSeries(points)]
