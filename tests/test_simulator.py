@@ -10,6 +10,8 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest import mock
 
+import pytest
+
 from simulator import simulator as sim
 
 TZ = timezone(timedelta(hours=8))
@@ -28,27 +30,54 @@ class FakeRedis:
 # ---------- 1. 事件生成 ----------
 
 def test_stations_carry_display_metadata():
-    """站点要带中文名、线序、经纬度，字段名与契约 4.5 一致。"""
+    """嵌套结构：线路表带名称/颜色/顺序，站点带中文名、线序、经纬度。"""
+    for line_id, line in sim.LINES.items():
+        assert line["name"], line_id
+        assert line["color"].startswith("#"), line_id
+        assert isinstance(line["order"], int), line_id
     for station_id, station in sim.STATIONS.items():
         assert station["name"], station_id
-        assert station["line_id"], station_id
-        assert station["line_name"], station_id
-        assert station["color"].startswith("#"), station_id
+        assert station["line_id"] in sim.LINES, station_id
         assert isinstance(station["order"], int), station_id
         assert isinstance(station["lng"], (int, float)), station_id
         assert isinstance(station["lat"], (int, float)), station_id
         assert 0 <= station["weight"] <= 1, station_id
 
 
-def test_stations_on_same_line_share_line_metadata():
-    """同一线路的 line_name 与 color 必须一致，否则 /api/stations 归并出矛盾结果。"""
-    seen = {}
+def test_line_order_and_station_order_increasing():
+    """线路表 order 与同线路站点 order 都严格递增，前端图例顺序才稳定。"""
+    line_orders = [line["order"] for line in sim.LINES.values()]
+    assert line_orders == sorted(set(line_orders))
+    by_line = {}
     for station in sim.STATIONS.values():
-        key = station["line_id"]
-        if key in seen:
-            assert seen[key] == (station["line_name"], station["color"]), key
-        else:
-            seen[key] = (station["line_name"], station["color"])
+        by_line.setdefault(station["line_id"], []).append(station["order"])
+    for line_id, orders in by_line.items():
+        assert orders == sorted(set(orders)), line_id
+
+
+def test_load_network_missing_station_fields(tmp_path):
+    """缺字段容错：缺 weight 给默认 1.0，缺 line_id 跳过该站。"""
+    path = tmp_path / "stations.json"
+    path.write_text(json.dumps({
+        "lines": {"L1": {"name": "1号线", "color": "#2F6BFF", "order": 1}},
+        "stations": {
+            "A01": {"name": "人民广场", "line_id": "L1", "order": 1},
+            "A02": {"name": "坏站", "order": 2},
+        },
+    }, ensure_ascii=False), encoding="utf-8")
+    lines, stations = sim.load_network(str(path))
+    assert lines["L1"]["name"] == "1号线"
+    assert stations["A01"]["weight"] == 1.0
+    assert "A02" not in stations
+
+
+def test_load_network_rejects_broken_structure(tmp_path):
+    """顶层缺 lines/stations 或不是对象，直接报错，不带病运行。"""
+    path = tmp_path / "stations.json"
+    for payload in ({"A01": {"line_id": "L1"}}, {"lines": {}}, {"stations": []}, "not-an-object"):
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        with pytest.raises((ValueError, json.JSONDecodeError)):
+            sim.load_network(str(path))
 
 
 def test_make_event_has_all_contract_fields():
