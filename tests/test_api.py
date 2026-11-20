@@ -12,7 +12,7 @@ from django.db import DatabaseError
 from django.utils import timezone
 
 from api import views
-from api.models import MetricWindow
+from api.models import MetricQuality, MetricWindow
 
 
 class FakeRedis:
@@ -23,11 +23,13 @@ class FakeRedis:
         return self.payload
 
 
-def make_rows(station_id, base, count=3, passengers=5, in_p=None, out_p=None):
+def make_rows(station_id, base, count=3, passengers=5, in_p=None, out_p=None,
+              late=0):
     """造 count 行，时间从 base 起每秒一行。base 由调用方给定，避免各站时间戳错位。
 
     v1.3 起可以指定进/出站分项；不指定时按 passengers 对半分，
     保证 total == in + out 这个约束在测试数据里也成立。
+    late 用于构造迟到数据，供 quality 的回退分支验证。
     """
     if in_p is None:
         in_p = passengers // 2
@@ -40,6 +42,7 @@ def make_rows(station_id, base, count=3, passengers=5, in_p=None, out_p=None):
             passengers=passengers,
             in_passengers=in_p,
             out_passengers=out_p,
+            late_count=late,
         )
 
 
@@ -456,6 +459,42 @@ def test_summary_today_degrades_when_db_down(client, monkeypatch):
     response = client.get("/api/summary/today")
     assert response.status_code == 200
     assert response.json()["total"] == 0
+
+
+@pytest.mark.django_db
+def test_summary_quality_has_invalid_count(client):
+    """契约 4.4 要求 quality 三个字段齐全，缺 invalid_count 前端会显示 undefined。"""
+    body = client.get("/api/summary/today").json()
+    assert set(body["quality"]) == {"late_count", "invalid_count", "rows"}
+
+
+@pytest.mark.django_db
+def test_summary_quality_reads_quality_table(client, base_ts):
+    """有窗口级质量数据时以它为准，不被 metric_window 的迟到数覆盖。"""
+    MetricQuality.objects.create(ts=base_ts, late_count=7, invalid_count=4)
+    make_rows("A01", base_ts, count=1, passengers=5, late=1)
+    quality = client.get("/api/summary/today").json()["quality"]
+    assert quality["late_count"] == 7
+    assert quality["invalid_count"] == 4
+
+
+@pytest.mark.django_db
+def test_summary_quality_falls_back_to_window_late(client, base_ts):
+    """过渡期新表为空：迟到回退到逐站累加，非法只能给 0。"""
+    make_rows("A01", base_ts, count=1, passengers=5, late=2)
+    make_rows("B01", base_ts, count=1, passengers=5, late=3)
+    quality = client.get("/api/summary/today").json()["quality"]
+    assert quality["late_count"] == 5      # 2 + 3，两站各自迟到数
+    assert quality["invalid_count"] == 0   # 无站点级来源可回退
+    assert quality["rows"] == 2
+
+
+@pytest.mark.django_db
+def test_summary_quality_degrades_when_db_down(client, monkeypatch):
+    """数据库挂掉时 quality 也要给 0 值结构，不能让整个接口变 500。"""
+    break_db(monkeypatch)
+    quality = client.get("/api/summary/today").json()["quality"]
+    assert quality == {"late_count": 0, "invalid_count": 0, "rows": 0}
 
 
 def test_stations_reads_collector_file(client, station_file):

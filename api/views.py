@@ -22,7 +22,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from .models import MetricWindow
+from .models import MetricQuality, MetricWindow
 from .stations import build_line_map, stations_of_line, stations_payload
 
 # 降级是有代价的（数据缺失），每次都要在日志里留下痕迹，否则排障时无从查起
@@ -501,6 +501,33 @@ def fetch_today(since):
     )
 
 
+def today_quality(since, fallback_late=0):
+    """今日数据质量计数，优先取窗口级表 metric_quality。
+
+    为什么不从 metric_window 逐站累加非法数：非法事件可能连 station_id 都没有，
+    摊到每站会重复计数。窗口级只在 metric_quality 里存一份，才是唯一正确的值。
+
+    过渡期回退：计算端还没往新表写入时，新表查出来是空的。
+    此时「迟到」可以退回 metric_window 逐站累加——迟到事件必然带 station_id，
+    两者都是窗口级同一个量，数值等价，不会因此失真。
+    「非法」没有站点标识可回退，只能给 0：宁可显示没有，
+    也不能拿一个凑出来的数字冒充。
+
+    表为空时返回 0 值而不是 null：契约 4.4 的 quality 三个字段都是整数，
+    "还没有质量数据"与"没有异常"对外表现一致，前端也不必再分支。
+    """
+
+    def fetch():
+        agg = MetricQuality.objects.filter(ts__gte=since).aggregate(
+            late=Sum("late_count"), invalid=Sum("invalid_count")
+        )
+        if agg["late"] is None:
+            return {"late_count": fallback_late, "invalid_count": 0}
+        return {"late_count": agg["late"], "invalid_count": agg["invalid"] or 0}
+
+    return query_rows(fetch, {"late_count": fallback_late, "invalid_count": 0})
+
+
 def build_today(rows, since, now):
     """把分组结果拼成契约 4.4 的响应体。
 
@@ -514,6 +541,10 @@ def build_today(rows, since, now):
         sum(r["passengers"] or 0 for r in rows),
         "all",
     )
+    # 质量计数来自窗口级表，与上面的分站聚合是两次查询：
+    # 前者按窗口粒度一份，后者按站点粒度，混在一张表里就会重复计数。
+    # 新表尚未写入时，迟到数回退到分站累加值（两者同为窗口级、数值等价）
+    quality = today_quality(since, fallback_late=sum(r["late"] or 0 for r in rows))
     return {
         "date": since.strftime("%Y-%m-%d"),
         "since": local_iso(since),
@@ -529,7 +560,10 @@ def build_today(rows, since, now):
         "lines": today_lines(rows),
         "top_stations": today_top(rows),
         "quality": {
-            "late_count": sum(r["late"] or 0 for r in rows),
+            "late_count": quality["late_count"],
+            "invalid_count": quality["invalid_count"],
+            # rows 仍指 metric_window 的窗口行数，语义没变：
+            # 它衡量"落库了多少站点·秒"，与质量计数是两回事
             "rows": sum(r["rows"] or 0 for r in rows),
         },
     }
