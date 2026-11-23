@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="600" viewBox="0 0 720 400" font-family="'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif">
+  <style>
+    .st { fill: none; stroke: #2b2b2b; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nf { fill: #ffffff; stroke: #2b2b2b; stroke-width: 1.8; }
+    .eg { fill: none; stroke: #6b6b75; stroke-width: 1.5; stroke-linecap: round; }
+    .nl { fill: #1f1f1f; font-size: 12px; font-weight: 500; text-decoration: underline; }
+    .tg { fill: #6b6b75; font-size: 10px; }
+    .cb { fill: #ffffff; stroke: rgba(23,23,23,.14); stroke-width: 1; }
+    .ct { fill: #1f1f1f; font-size: 11px; font-weight: 500; }
+    .lg { fill: #6b6b75; font-size: 11px; }
+    .title { fill: #171717; font-size: 15px; font-weight: 600; }
+    .subtitle { fill: #6b6b75; font-size: 11px; }
+  </style>
+
+  <rect x="0" y="0" width="720" height="400" fill="#ffffff"/>
+
+  <text class="title" x="24" y="30">UC-03 注入异常数据 · 鲁棒图</text>
+  <text class="subtitle" x="24" y="50">异常作用于闸机事件本身，不是站点；注入后照常写入队列，由消费端统计</text>
+
+  <defs>
+    <marker id="rbArrow3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#6b6b75"/>
+    </marker>
+  </defs>
+
+  <g>
+    <circle class="st" cx="70" cy="158" r="11"/>
+    <path class="st" d="M70 169 V204 M55 179 H85 M70 204 L58 231 M70 204 L82 231"/>
+    <text class="ct" x="70" y="252" text-anchor="middle">系统维护者</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="250" cy="200" r="34"/>
+    <path class="st" d="M200 180 V220 M200 200 H216"/>
+    <text class="nl" x="250" y="258" text-anchor="middle">:命令行界面</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="470" cy="200" r="34"/>
+    <path class="eg" d="M444.2 163.1 A45 45 0 0 1 495.8 163.1" marker-end="url(#rbArrow3)"/>
+    <text class="nl" x="470" y="258" text-anchor="middle">:事件生成服务</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="640" cy="120" r="30"/>
+    <path class="st" d="M610 158 H670"/>
+    <text class="nl" x="640" y="177" text-anchor="middle">:闸机事件</text>
+  </g>
+
+  <g>
+    <rect class="nf" x="560" y="300" width="150" height="54" rx="8"/>
+    <text class="tg" x="635" y="320" text-anchor="middle">«外部系统»</text>
+    <text class="nl" x="635" y="341" text-anchor="middle">:Redis Stream</text>
+  </g>
+
+  <path class="eg" d="M80 200 H192" marker-end="url(#rbArrow3)"/>
+  <path class="eg" d="M284 190 H432" marker-end="url(#rbArrow3)"/>
+  <path class="eg" d="M504 190 H534 V208 H508" marker-end="url(#rbArrow3)"/>
+  <path class="eg" d="M500.7 185.5 L610.7 133.3" marker-end="url(#rbArrow3)"/>
+  <path class="eg" d="M497 220.7 L600 300" marker-end="url(#rbArrow3)"/>
+  <path class="eg" d="M436 208 H288" marker-end="url(#rbArrow3)"/>
+
+  <rect class="cb" x="88" y="206" width="112" height="22" rx="8"/>
+  <text class="ct" x="144" y="221" text-anchor="middle">1：“设置注入比例”</text>
+
+  <rect class="cb" x="312" y="164" width="96" height="22" rx="8"/>
+  <text class="ct" x="360" y="179" text-anchor="middle">1.1：校验取值</text>
+
+  <rect class="cb" x="538" y="188" width="104" height="22" rx="8"/>
+  <text class="ct" x="590" y="203" text-anchor="middle">4.2：按比例抽样</text>
+
+  <rect class="cb" x="480" y="124" width="124" height="22" rx="8"/>
+  <text class="ct" x="542" y="139" text-anchor="middle">4.3：改写事件字段</text>
+
+  <rect class="cb" x="490" y="240" width="118" height="22" rx="8"/>
+  <text class="ct" x="549" y="255" text-anchor="middle">5.1：XADD 写入</text>
+
+  <rect class="cb" x="304" y="212" width="112" height="22" rx="8"/>
+  <text class="ct" x="360" y="227" text-anchor="middle">6.1：打印日志</text>
+
+  <text class="lg" x="24" y="386">异常两类：缺字段（去掉 passengers 或 event_time）与乱序（事件时间回拨 3—30 秒）；--inject 超出 0—1 参数校验直接报错。</text>
+</svg>
