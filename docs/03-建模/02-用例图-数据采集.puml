@@ -1,7 +1,30 @@
 @startuml 02-用例图-数据采集
+' =====================================================================
+' 产物：数据采集模块 精化用例图（对应 UC-01～UC-04）
+' 规范：references/01 §2–§5 + §5.2 判定表
+' 规模：2 参与者 / 4 用例 → 未超阈值（06 §1）
+'
+' 节点清单
+'   参与者  系统维护者（人）｜实时计算模块（下游，外部系统 «actor»）
+'   用例    UC-01 生成闸机事件｜UC-02 设置发送速率与数量
+'           UC-03 注入异常数据｜UC-04 回放历史样例
+' 边清单
+'   系统维护者   — UC-01、UC-02、UC-03、UC-04   （关联，无箭头）
+'   实时计算模块 — UC-01、UC-04                 （关联，无箭头）
+'   UC-02 «extend» → UC-01   扩展点：指定速率与条数
+'   UC-03 «extend» → UC-01   扩展点：按比例混入脏数据
+' 修正说明
+'   1. 所有关联去掉箭头；原图的"写入 gate_events"是数据流，不是关联语义，
+'      移到图注（01 §3 硬规则 2）。
+'   2. UC-02、UC-03 原图无参与者关联，补上系统维护者（01 §3 硬规则 1：
+'      每个用例至少一个参与者）。
+'   3. UC-01 与 UC-04 的产出都写入事件队列 gate_events，属数据流而非关联，
+'      不在图上标注，去向见《数据流图》与《接口契约》第 2.1 节。
+' =====================================================================
 title 数据采集模块 用例图
 left to right direction
 skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei"
 skinparam actorStyle awesome
 skinparam packageStyle rectangle
 skinparam usecase {
@@ -10,7 +33,7 @@ skinparam usecase {
 }
 
 actor "系统维护者" as ops
-actor "实时计算模块\n(下游)" as calc
+actor "实时计算模块（下游）\n«actor»" as calc
 
 rectangle "数据采集模块（simulator/）" {
   usecase "UC-01: 生成闸机事件" as UC01
@@ -19,12 +42,14 @@ rectangle "数据采集模块（simulator/）" {
   usecase "UC-04: 回放历史样例" as UC04
 }
 
-ops --> UC01
-ops --> UC04
+ops -- UC01
+ops -- UC02
+ops -- UC03
+ops -- UC04
 
-UC02 .> UC01 : <<extend>>
-UC03 .> UC01 : <<extend>>
+UC01 -- calc
+UC04 -- calc
 
-UC01 --> calc : 写入 gate_events
-UC04 --> calc : 写入 gate_events
+UC02 .> UC01 : <<extend>>\n扩展点：指定速率与条数
+UC03 .> UC01 : <<extend>>\n扩展点：按比例混入脏数据
 @enduml
