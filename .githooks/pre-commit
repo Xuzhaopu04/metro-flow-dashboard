@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# 提交前拦"太大的文件"。
+#
+# 为什么拦：单个文件超过 5000 token，agent 每次读它都要占掉大半上下文，
+# 后面真正要改的那几行反而被挤出去。人读也累。按功能拆小是唯一解法。
+#
+# 粗细换算：token ≈ 字节 ÷ 4，所以 5000 token 卡在 20000 字节。
+#
+# 每个仓库成员克隆后执行一次：
+#     git config core.hooksPath .githooks
+
+set -u
+
+LIMIT_BYTES=20000
+LIMIT_TOKENS=$((LIMIT_BYTES / 4))
+
+# 这几类 agent 不读，跳过不查：锁文件、压缩产物、生成物、二进制
+SKIP_RE='(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|Pipfile\.lock)$'
+SKIP_RE="$SKIP_RE"'|\.(min\.js|min\.css|map|lock|png|jpg|jpeg|gif|ico|pdf|docx?|xlsx?|zip|jar|woff2?)$'
+SKIP_RE="$SKIP_RE"'|^data/samples/'
+
+fail=0
+report=""
+
+while IFS= read -r -d '' path; do
+    if printf '%s' "$path" | grep -Eq "$SKIP_RE"; then
+        continue
+    fi
+    [ -f "$path" ] || continue
+
+    size=$(wc -c < "$path" | tr -d ' ')
+    if [ "$size" -gt "$LIMIT_BYTES" ]; then
+        fail=$((fail + 1))
+        report="$report$(printf '  %5d token  %7d 字节  %s\n' $((size / 4)) "$size" "$path")"
+    fi
+done < <(git diff --cached --name-only --diff-filter=ACM -z)
+
+if [ "$fail" -eq 0 ]; then
+    exit 0
+fi
+
+{
+    echo ""
+    echo "提交被拦下：$fail 个文件超过 $LIMIT_TOKENS token（$LIMIT_BYTES 字节）"
+    echo ""
+    echo "$report"
+    echo "一个文件这么大，agent 读它会挤掉别的上下文，人也难一次看完。"
+    echo "请按功能拆成几个小文件再提交（例如按类/按接口/按场景拆）。"
+    echo "确实必须整块提交（如生成的 CSV），把路径加进 .githooks/pre-commit 的 SKIP_RE。"
+    echo ""
+} >&2
+
+exit 1
