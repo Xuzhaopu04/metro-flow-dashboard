@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="450" viewBox="0 0 720 300" font-family="'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif">
+  <style>
+    .st { fill: none; stroke: #2b2b2b; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nf { fill: #ffffff; stroke: #2b2b2b; stroke-width: 1.8; }
+    .eg { fill: none; stroke: #6b6b75; stroke-width: 1.5; stroke-linecap: round; }
+    .nl { fill: #1f1f1f; font-size: 12px; font-weight: 500; text-decoration: underline; }
+    .tg { fill: #6b6b75; font-size: 10px; }
+    .cb { fill: #ffffff; stroke: rgba(23,23,23,.14); stroke-width: 1; }
+    .ct { fill: #1f1f1f; font-size: 11px; font-weight: 500; }
+    .lg { fill: #6b6b75; font-size: 11px; }
+    .title { fill: #171717; font-size: 15px; font-weight: 600; }
+    .subtitle { fill: #6b6b75; font-size: 11px; }
+  </style>
+
+  <rect x="0" y="0" width="720" height="300" fill="#ffffff"/>
+
+  <text class="title" x="24" y="30">UC-02 设置发送速率与数量 · 鲁棒图</text>
+  <text class="subtitle" x="24" y="50">只有边界与控制：速率参数不持久化，按「不编造实体」原则留空</text>
+
+  <defs>
+    <marker id="rbArrow2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#6b6b75"/>
+    </marker>
+  </defs>
+
+  <g>
+    <circle class="st" cx="70" cy="160" r="11"/>
+    <path class="st" d="M70 171 V206 M55 181 H85 M70 206 L58 233 M70 206 L82 233"/>
+    <text class="ct" x="70" y="254" text-anchor="middle">系统维护者</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="250" cy="160" r="34"/>
+    <path class="st" d="M200 140 V180 M200 160 H216"/>
+    <text class="nl" x="250" y="218" text-anchor="middle">:命令行界面</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="470" cy="160" r="34"/>
+    <path class="eg" d="M444.2 123.1 A45 45 0 0 1 495.8 123.1" marker-end="url(#rbArrow2)"/>
+    <text class="nl" x="470" y="218" text-anchor="middle">:事件生成服务</text>
+  </g>
+
+  <path class="eg" d="M80 160 H192" marker-end="url(#rbArrow2)"/>
+  <path class="eg" d="M284 150 H432" marker-end="url(#rbArrow2)"/>
+  <path class="eg" d="M436 170 H288" marker-end="url(#rbArrow2)"/>
+  <path class="eg" d="M504 150 H532 V168 H508" marker-end="url(#rbArrow2)"/>
+
+  <rect class="cb" x="74" y="166" width="124" height="22" rx="8"/>
+  <text class="ct" x="136" y="181" text-anchor="middle">1：“设置速率与数量”</text>
+
+  <rect class="cb" x="300" y="124" width="124" height="22" rx="8"/>
+  <text class="ct" x="362" y="139" text-anchor="middle">1.1：解析并校验参数</text>
+
+  <rect class="cb" x="302" y="174" width="116" height="22" rx="8"/>
+  <text class="ct" x="360" y="189" text-anchor="middle">1.3：发送节奏就绪</text>
+
+  <rect class="cb" x="536" y="148" width="96" height="22" rx="8"/>
+  <text class="ct" x="584" y="163" text-anchor="middle">1.2：换算间隔</text>
+
+  <text class="lg" x="24" y="284">换算规则：发送间隔 = 1 / speed；speed 非正数按 0.01 兜底，避免除零或死循环；--count 为 0 表示不限条数。</text>
+</svg>

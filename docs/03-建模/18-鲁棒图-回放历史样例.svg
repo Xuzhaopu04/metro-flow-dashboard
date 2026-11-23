@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="600" viewBox="0 0 720 400" font-family="'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif">
+  <style>
+    .st { fill: none; stroke: #2b2b2b; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .nf { fill: #ffffff; stroke: #2b2b2b; stroke-width: 1.8; }
+    .eg { fill: none; stroke: #6b6b75; stroke-width: 1.5; stroke-linecap: round; }
+    .nl { fill: #1f1f1f; font-size: 12px; font-weight: 500; text-decoration: underline; }
+    .tg { fill: #6b6b75; font-size: 10px; }
+    .cb { fill: #ffffff; stroke: rgba(23,23,23,.14); stroke-width: 1; }
+    .ct { fill: #1f1f1f; font-size: 11px; font-weight: 500; }
+    .lg { fill: #6b6b75; font-size: 11px; }
+    .title { fill: #171717; font-size: 15px; font-weight: 600; }
+    .subtitle { fill: #6b6b75; font-size: 11px; }
+  </style>
+
+  <rect x="0" y="0" width="720" height="400" fill="#ffffff"/>
+
+  <text class="title" x="24" y="30">UC-04 回放历史样例 · 鲁棒图</text>
+  <text class="subtitle" x="24" y="50">回放与实时生成是两条独立入口，失败语义不同，故单独拆出「:回放服务」</text>
+
+  <defs>
+    <marker id="rbArrow4" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#6b6b75"/>
+    </marker>
+  </defs>
+
+  <g>
+    <circle class="st" cx="70" cy="158" r="11"/>
+    <path class="st" d="M70 169 V204 M55 179 H85 M70 204 L58 231 M70 204 L82 231"/>
+    <text class="ct" x="70" y="252" text-anchor="middle">系统维护者</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="250" cy="200" r="34"/>
+    <path class="st" d="M200 180 V220 M200 200 H216"/>
+    <text class="nl" x="250" y="258" text-anchor="middle">:命令行界面</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="470" cy="200" r="34"/>
+    <path class="eg" d="M444.2 163.1 A45 45 0 0 1 495.8 163.1" marker-end="url(#rbArrow4)"/>
+    <text class="nl" x="470" y="258" text-anchor="middle">:回放服务</text>
+  </g>
+
+  <g>
+    <circle class="nf" cx="648" cy="128" r="30"/>
+    <path class="st" d="M618 166 H678"/>
+    <circle class="nf" cx="640" cy="120" r="30"/>
+    <path class="st" d="M610 158 H670"/>
+    <text class="nl" x="640" y="177" text-anchor="middle">:闸机事件</text>
+    <text class="tg" x="640" y="191" text-anchor="middle">多实例 · 样例 JSONL</text>
+  </g>
+
+  <g>
+    <rect class="nf" x="560" y="300" width="150" height="54" rx="8"/>
+    <text class="tg" x="635" y="320" text-anchor="middle">«外部系统»</text>
+    <text class="nl" x="635" y="341" text-anchor="middle">:Redis Stream</text>
+  </g>
+
+  <path class="eg" d="M80 200 H192" marker-end="url(#rbArrow4)"/>
+  <path class="eg" d="M284 190 H432" marker-end="url(#rbArrow4)"/>
+  <path class="eg" d="M500.7 185.5 L610.7 133.3" marker-end="url(#rbArrow4)"/>
+  <path class="eg" d="M497 220.7 L600 300" marker-end="url(#rbArrow4)"/>
+  <path class="eg" d="M436 208 H288" marker-end="url(#rbArrow4)"/>
+
+  <rect class="cb" x="96" y="206" width="96" height="22" rx="8"/>
+  <text class="ct" x="144" y="221" text-anchor="middle">1：“回放样例”</text>
+
+  <rect class="cb" x="312" y="164" width="96" height="22" rx="8"/>
+  <text class="ct" x="360" y="179" text-anchor="middle">1.1：传入路径</text>
+
+  <rect class="cb" x="486" y="127" width="112" height="22" rx="8"/>
+  <text class="ct" x="542" y="142" text-anchor="middle">2.1：读取事件</text>
+
+  <rect class="cb" x="490" y="240" width="104" height="22" rx="8"/>
+  <text class="ct" x="542" y="255" text-anchor="middle">4.1：逐条写入</text>
+
+  <rect class="cb" x="304" y="212" width="112" height="22" rx="8"/>
+  <text class="ct" x="360" y="227" text-anchor="middle">5.1：打印进度</text>
+
+  <text class="lg" x="24" y="386">样例时间戳整体平移到当前时间，保留相对间隔；同样样例两次回放得到同样指标序列；样例为空则提示后结束。</text>
+</svg>
