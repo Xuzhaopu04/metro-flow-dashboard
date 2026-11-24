@@ -1,0 +1,46 @@
+/* 帮助抽屉：还是同一套浅色刻度，标题用下划线标签页，内容当文档排。 */
+
+.drawer-mask { position: fixed; inset: 0; z-index: 40; background: rgba(20, 22, 26, .24); }
+.drawer { position: fixed; top: 0; right: 0; z-index: 41; height: 100vh; width: min(520px, 94vw);
+          display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--line); }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px 0; }
+.drawer-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.drawer-tabs { display: flex; gap: 20px; margin-top: 12px; padding: 0 24px; border-bottom: 1px solid var(--line); }
+.drawer-tabs .tab { padding: 8px 0 10px; border-radius: 0; background: transparent;
+                    border-bottom: 2px solid transparent; font-size: 12px; }
+.drawer-tabs .tab.on { background: transparent; border-bottom-color: var(--text); }
+
+.drawer-body { flex: 1; overflow: auto; padding: 16px 24px 28px; }
+.drawer-body p { margin: 0 0 8px; font-size: 13px; line-height: 1.75; color: var(--muted); }
+.drawer-body h4 { margin: 18px 0 8px; font-size: 12px; font-weight: 500; color: var(--faint); }
+.drawer-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.drawer-body th { padding: 7px 8px; text-align: left; font-weight: 500; font-size: 12px;
+                  color: var(--faint); white-space: nowrap; border-bottom: 1px solid var(--line); }
+.drawer-body td { padding: 9px 8px; border-bottom: 1px solid var(--line-soft);
+                  color: var(--muted); vertical-align: top; line-height: 1.65; }
+.drawer-body tr:last-child td { border-bottom: 0; }
+.drawer-body td:first-child { color: var(--text); white-space: nowrap; }
+.drawer-body code { font-family: ui-monospace, Consolas, monospace; font-size: 12px;
+                    color: #2b57c9; background: #f4f5f2; padding: 2px 5px; border-radius: 4px; }
+
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.steps li { position: relative; padding: 0 0 12px 22px; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.steps li::before { counter-increment: step; content: counter(step) "."; position: absolute; left: 0;
+                    color: var(--faint); font-variant-numeric: tabular-nums; }
+.steps strong { color: var(--text); font-weight: 600; }
+
+.links { display: flex; flex-direction: column; }
+.links a, .links .plain { display: flex; align-items: baseline; gap: 8px; padding: 7px 0;
+                          font-size: 13px; color: #2b57c9; text-decoration: none;
+                          border-bottom: 1px solid var(--line-soft); }
+.links a:hover { color: var(--text); }
+.links .plain { color: var(--muted); }
+.links em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--faint); }
+
+.faq details { padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.faq details:last-child { border-bottom: 0; }
+.faq summary { cursor: pointer; font-size: 13px; list-style: none; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::before { content: "+"; display: inline-block; width: 14px; color: var(--faint); }
+.faq details[open] summary::before { content: "−"; }
+.faq p { margin: 6px 0 0 14px; font-size: 12px; color: var(--muted); }

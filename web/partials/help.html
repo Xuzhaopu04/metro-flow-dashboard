@@ -1,0 +1,78 @@
+{# 帮助抽屉：口径、处置、入口。首屏不放这些字，需要时再拉开。 #}
+{% verbatim %}
+<div class="drawer-mask" v-if="helpOpen" @click.self="helpOpen = false"></div>
+<aside class="drawer" v-if="helpOpen" role="dialog" aria-label="帮助">
+  <div class="drawer-head">
+    <h3>帮助</h3>
+    <button class="btn-quiet" @click="helpOpen = false">关闭</button>
+  </div>
+  <div class="drawer-tabs">
+    <button class="tab" :class="{ on: helpTab === 'metric' }" @click="helpTab = 'metric'">指标口径</button>
+    <button class="tab" :class="{ on: helpTab === 'judge' }" @click="helpTab = 'judge'">异常处置</button>
+    <button class="tab" :class="{ on: helpTab === 'faq' }" @click="helpTab = 'faq'">问答与入口</button>
+  </div>
+
+  <div class="drawer-body">
+    <div v-if="helpTab === 'metric'">
+      <p>这块屏只回答三件事：哪个站人多、有没有超阈值、数据还可不可信。</p>
+      <table>
+        <tbody>
+          <tr><td>当前秒乘降量</td><td>当前 1 秒窗口内进站 + 出站的 passengers 之和，每秒清零重算</td></tr>
+          <tr><td>区间累计</td><td>查询页对所选时间范围的逐秒/分钟/小时点求和，是前端汇总，不等于“今日累计”</td></tr>
+          <tr><td>今日累计</td><td>查询页顶部“今日汇总”，来自 /api/summary/today，起点为项目时区当日 0 点</td></tr>
+          <tr><td>方向</td><td>进站/出站由契约 v1.3 提供；计算端双写完成前为 null，页面显示“—”，不拿合计顶替</td></tr>
+          <tr><td>活跃站点</td><td>当前窗口内有数据的站点数</td></tr>
+          <tr><td>迟到</td><td>事件时间早于窗口起点 2 秒以上，只计数，不计入客流</td></tr>
+          <tr><td>非法</td><td>缺必填字段、类型不对、JSON 解析失败</td></tr>
+          <tr><td>排行与趋势</td><td>排行取最近 5 分钟累计降序；趋势与查询支持秒/分钟/小时粒度，最多回溯 60 分钟或今日</td></tr>
+        </tbody>
+      </table>
+      <p>窗口按处理时间切、迟到不回补；快照 TTL 5 秒，消费者停 5 秒以上页面就显示“暂无数据”。阈值走服务端配置，页面只照下发的值渲染。</p>
+    </div>
+
+    <div v-if="helpTab === 'judge'">
+      <table>
+        <thead><tr><th>页面现象</th><th>多半是什么</th><th>先做什么</th></tr></thead>
+        <tbody>
+          <tr><td>页脚变黄</td><td>数据停更 10—30 秒，消费者重连中</td><td>看消费者终端最后一行</td></tr>
+          <tr><td>页脚变红</td><td>消费者退出，或 Redis 断了</td><td>查 metric:snapshot 是否还在</td></tr>
+          <tr><td>右上角连接中断</td><td>接口请求失败，服务没起或端口不通</td><td>直接打开 /api/snapshot</td></tr>
+          <tr><td>有数字、柱子全空</td><td>快照结构异常或接口降级</td><td>看接口返回的原始 JSON</td></tr>
+          <tr><td>迟到或非法持续涨</td><td>时钟不同步，或上游数据变脏</td><td>对时，再看消费者日志</td></tr>
+        </tbody>
+      </table>
+      <h4>处置顺序</h4>
+      <ol class="steps">
+        <li>看页脚与连接状态，先分清是<strong>没数据</strong>还是<strong>连不上</strong>。</li>
+        <li>打开 <code>/api/snapshot</code>：空结构说明没快照，有数据说明问题在本页。</li>
+        <li>执行 <code>redis-cli GET metric:snapshot</code>：键在查接口，键不在查消费者。</li>
+        <li>按 Redis/MySQL → 消费者 → 模拟器 → 页面 的顺序重启，再用固定样例回放验证。</li>
+      </ol>
+      <p>链路：模拟器 → gate_events → 消费者 → 快照/明细表 → 接口 → 本页。停在哪一层，页脚和连接状态会先给信号。</p>
+    </div>
+
+    <div v-if="helpTab === 'faq'">
+      <div class="faq">
+        <details><summary>为什么当前秒乘降量每秒都归零？</summary>
+          <p>它是 1 秒窗口值，不是累计值。要看今日累计请切到“客流查询”，顶部今日汇总来自 /api/summary/today。</p></details>
+        <details><summary>排行有数字，柱子却是 0？</summary>
+          <p>排行看最近 5 分钟，柱子只看当前这一秒。刚回放完也会这样，5 分钟后自然消失。</p></details>
+        <details><summary>告警阈值在哪里改？</summary>
+          <p>改环境变量 ALERT_THRESHOLD 后重启服务端；页面直接使用接口下发的值。</p></details>
+        <details><summary>能看到进站和出站分开统计吗？</summary>
+          <p>接口已支持 direction=in / out；计算端双写完成前返回 null，页面显示“—”，不会把合计拆成进站或出站。</p></details>
+      </div>
+      <h4>接口入口</h4>
+      <div class="links">
+        <a href="/api/snapshot" target="_blank" rel="noopener">/api/snapshot <em>当前快照</em></a>
+        <a href="/api/series?minutes=5&granularity=minute&direction=all" target="_blank" rel="noopener">/api/series <em>历史序列</em></a>
+        <a href="/api/rank?top=5&minutes=5" target="_blank" rel="noopener">/api/rank <em>站点排行</em></a>
+        <a href="/api/summary/today" target="_blank" rel="noopener">/api/summary/today <em>今日汇总</em></a>
+        <a href="/api/stations" target="_blank" rel="noopener">/api/stations <em>站点元数据</em></a>
+        <span class="plain">docs/02-设计/指标口径.md <em>口径</em></span>
+        <span class="plain">docs/02-设计/接口契约.md <em>字段</em></span>
+      </div>
+    </div>
+  </div>
+</aside>
+{% endverbatim %}

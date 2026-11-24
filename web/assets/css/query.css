@@ -1,0 +1,57 @@
+/* 客流查询视图：和实时监看共用一套浅色刻度，靠空白和一道分隔线分组，不再套第二个卡片。 */
+
+.query-page .today { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.today-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* 指标条：只有标签 + 数字，不再套灰底方框 */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 14px; margin-top: 12px; }
+/* 只有三项时不许铺满整行：数字隔太远就读不出是一组 */
+.stat-row.tight { grid-template-columns: repeat(auto-fit, minmax(130px, 170px)); justify-content: start; }
+.stat-row .item span { display: block; font-size: 12px; color: var(--faint); }
+.stat-row .item b { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat-row .item small { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--faint); }
+
+.today-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 32px;
+               margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.today-split h4 { margin: 0 0 6px; font-size: 12px; font-weight: 400; color: var(--faint); }
+.mini-list { list-style: none; margin: 0; padding: 0; }
+.mini-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px;
+                padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+.mini-list li:last-child { border-bottom: 0; }
+.mini-list span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-list b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.mini-list small { grid-column: 1 / -1; font-size: 12px; color: var(--faint); }
+.mini-list li.muted { display: block; color: var(--faint); }
+
+.query-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+                  gap: 16px; margin-top: 18px; }
+.control > label { display: block; margin-bottom: 6px; font-size: 12px; color: var(--faint); }
+.control .toolbar { justify-content: flex-start; }
+.station-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.note-line { margin-top: 12px; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.note-line.warn { color: #8a5a00; }
+.note-line b { font-variant-numeric: tabular-nums; }
+
+.query-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; margin-top: 12px; }
+.query-rank { border-left: 1px solid var(--line-soft); padding-left: 16px; }
+.query-rank ol.rank li { cursor: default; }
+.query-rank h3 { font-size: 13px; }
+
+.table-head { display: flex; align-items: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.table-head h3 { font-size: 13px; }
+.table-head .hint { margin-left: auto; }
+.data-wrap { margin-top: 8px; max-height: 300px; overflow: auto;
+             border: 1px solid var(--line-soft); border-radius: var(--r-ctl); }
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data th { position: sticky; top: 0; background: var(--panel); text-align: left;
+                font-weight: 500; font-size: 12px; color: var(--faint);
+                padding: 8px 12px; border-bottom: 1px solid var(--line); }
+table.data td { padding: 8px 12px; border-bottom: 1px solid var(--line-soft); color: var(--muted); }
+table.data tr:last-child td { border-bottom: 0; }
+
+@media (max-width: 1080px) {
+  .query-detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .query-rank { border-left: 0; border-top: 1px solid var(--line-soft); padding: 12px 0 0; }
+}

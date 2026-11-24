@@ -1,0 +1,170 @@
+{# 客流查询视图。策略：只保留能改变判断的信息，说明性小字要么进帮助抽屉，要么删掉。 #}
+{% verbatim %}
+<section class="card query-page" v-show="view === 'query'">
+  <div class="card-head">
+    <h2>客流查询</h2>
+    <div class="toolbar">
+      <button class="tab" :class="{ on: autoRefresh }" @click="toggleAutoRefresh">自动刷新{{ autoRefresh ? ' 开' : ' 关' }}</button>
+      <button class="tab" @click="refreshAll" :disabled="queryLoading || summaryLoading">{{ queryLoading || summaryLoading ? '加载中…' : '刷新' }}</button>
+    </div>
+  </div>
+
+  <div class="today" v-if="summary">
+    <div class="today-head">
+      <h3>今日汇总</h3>
+      <span class="hint">起点 00:00 · 更新 {{ summary.updated_at.slice(11, 19) }}</span>
+    </div>
+    <div class="stat-row">
+      <div class="item"><span>乘降量</span><b>{{ fmtNumber(summary.total) }}</b><small>人次</small></div>
+      <div class="item"><span>进站</span><b>{{ fmtNumber(summary.in) }}</b><small>人次</small></div>
+      <div class="item"><span>出站</span><b>{{ fmtNumber(summary.out) }}</b><small>人次</small></div>
+      <div class="item"><span>净流入</span><b>{{ fmtNumber(summary.net) }}</b><small>人次</small></div>
+      <div class="item"><span>峰值</span><b>{{ fmtNumber(summary.peak.total) }}</b>
+        <small>{{ summary.peak.ts ? summary.peak.ts.slice(11, 19) : '—' }}</small></div>
+      <div class="item"><span>迟到 / 非法</span>
+        <b>{{ summary.quality.late_count }} / {{ summary.quality.invalid_count }}</b></div>
+    </div>
+    <div class="today-split">
+      <div>
+        <h4>分线</h4>
+        <ul class="mini-list">
+          <li v-for="item in summary.lines" :key="item.line_id">
+            <span>{{ lineLabel(item.line_id) }}</span>
+            <b>{{ fmtNumber(item.total) }}</b>
+            <small>进 {{ fmtNumber(item.in) }} · 出 {{ fmtNumber(item.out) }}</small>
+          </li>
+          <li v-if="!summary.lines.length" class="muted">暂无分线数据</li>
+        </ul>
+      </div>
+      <div>
+        <h4>今日 Top 5</h4>
+        <ul class="mini-list">
+          <li v-for="(item, index) in summary.top_stations" :key="item.station_id">
+            <span>{{ index + 1 }}. {{ stationLabel(item.station_id) }}</span>
+            <b>{{ fmtNumber(item.total) }}</b>
+            <small>进 {{ fmtNumber(item.in) }} · 出 {{ fmtNumber(item.out) }}</small>
+          </li>
+          <li v-if="!summary.top_stations.length" class="muted">暂无排行数据</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="note-line" v-else-if="summaryLoading">正在加载今日汇总…</div>
+  <div class="note-line" v-else-if="summaryError">{{ summaryError }}</div>
+
+  <div class="query-controls">
+    <div class="control">
+      <label>时间范围</label>
+      <div class="toolbar">
+        <button class="tab" :class="{ on: rangeMode === 'today' }" @click="setRangeMode('today')">今日</button>
+        <button v-for="m in minuteOptions" :key="m" class="tab"
+                :class="{ on: rangeMode === 'minutes' && minutes === m }"
+                @click="setMinutes(m)">{{ m }} 分钟</button>
+      </div>
+    </div>
+    <div class="control">
+      <label>粒度</label>
+      <div class="toolbar">
+        <button v-for="opt in granularityOptions" :key="opt.value" class="tab"
+                :class="{ on: granularity === opt.value }"
+                @click="setGranularity(opt.value)">{{ opt.label }}</button>
+      </div>
+    </div>
+    <div class="control">
+      <label>线路</label>
+      <div class="toolbar">
+        <button v-for="opt in lineOptions" :key="opt.value" class="tab"
+                :class="{ on: selectedLine === opt.value }"
+                @click="setLine(opt.value)">{{ opt.label }}</button>
+      </div>
+    </div>
+    <div class="control">
+      <label>站点（最多 4 个）</label>
+      <div class="station-picker">
+        <button class="tab" :class="{ on: !selectedStations.length }" @click="selectAllStations">全部</button>
+        <button v-for="s in stationList" :key="s.station_id" class="tab"
+                :class="{ on: selectedStations.includes(s.station_id) }"
+                @click="toggleStation(s.station_id)">{{ stationLabel(s.station_id) }}</button>
+      </div>
+    </div>
+    <div class="control">
+      <label>方向</label>
+      <div class="toolbar">
+        <button v-for="opt in directionOptions" :key="opt.value" class="tab"
+                :class="{ on: direction === opt.value }"
+                @click="setDirection(opt.value)">{{ opt.label }}</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-line warn" v-if="directionUnknown">
+    进/出站数据尚未就绪：接口按契约返回 null，页面显示“—”，不拿合计顶替。
+  </div>
+
+  <div class="stat-row tight" style="margin-top: 18px">
+    <div class="item"><span>{{ queryTotalLabel }}</span><b>{{ fmtNumber(queryTotal) }}</b><small>人次</small></div>
+    <div class="item"><span>{{ selectedStations.length > 1 ? '单站峰值' : '峰值' }}</span>
+      <b>{{ fmtNumber(queryPeak) }}</b>
+      <small>人次/{{ granularity === 'second' ? '秒' : (granularity === 'minute' ? '分' : '小时') }}</small></div>
+    <div class="item"><span>数据点</span><b>{{ queryRows.length }}</b><small>个</small></div>
+  </div>
+
+  <div class="query-detail-grid">
+    <div class="chart-wrap">
+      <div class="chart" ref="queryEl"></div>
+      <div class="empty" v-if="queryLoading">加载中…</div>
+      <div class="empty" v-else-if="queryError">{{ queryError }}</div>
+      <div class="empty" v-else-if="!queryRows.length">暂无数据</div>
+    </div>
+    <aside class="query-rank">
+      <div class="table-head" style="margin-top: 0"><h3>{{ queryRankLabel }}</h3></div>
+      <ol class="rank">
+        <li v-for="(item, index) in queryRank" :key="item.station_id">
+          <span class="badge">{{ index + 1 }}</span>
+          <div class="rank-main">
+            <span class="rank-name">{{ stationLabel(item.station_id) }}</span>
+            <div class="rank-bar"><span :style="{ width: rankBarWidth(item) }"></span></div>
+          </div>
+          <span class="rank-num">{{ rankText(item) }}</span>
+        </li>
+        <li class="rank-empty" v-if="!queryRank.length">暂无数据</li>
+      </ol>
+    </aside>
+  </div>
+
+  <div class="note-line" v-if="queryTruncated">
+    数据点超过 2000 个，接口已等间隔抽稀；缩小时间范围或改用分钟/小时粒度可看到更完整的点。
+  </div>
+
+  <div class="table-head">
+    <h3>明细</h3>
+    <span class="hint">前 {{ queryTableLimit }} 行</span>
+    <button class="tab" @click="exportCsv" :disabled="!queryRows.length">导出 CSV</button>
+  </div>
+  <div class="data-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>站点</th>
+          <th v-if="direction === 'all'">合计</th>
+          <th v-if="direction === 'all' || direction === 'in'">进站</th>
+          <th v-if="direction === 'all' || direction === 'out'">出站</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="row in queryRows.slice(0, queryTableLimit)" :key="row.key">
+          <td>{{ formatTs(row.ts) }}</td>
+          <td>{{ stationLabel(row.station) }}</td>
+          <td v-if="direction === 'all'">{{ fmtNumber(row.total) }}</td>
+          <td v-if="direction === 'all' || direction === 'in'">{{ fmtNumber(row.in) }}</td>
+          <td v-if="direction === 'all' || direction === 'out'">{{ fmtNumber(row.out) }}</td>
+        </tr>
+        <tr v-if="!queryRows.length">
+          <td :colspan="direction === 'all' ? 5 : 4">暂无数据</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endverbatim %}

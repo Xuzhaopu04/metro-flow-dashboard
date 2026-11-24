@@ -1,0 +1,119 @@
+/* 值班大屏的底色和刻度。
+   颜色只用在数据（线路、客流、状态）上，装饰一律不加：
+   没有投影、没有渐变、没有发光，卡片只有一道 1px 边。 */
+
+:root {
+  --bg: #f5f6f4; --panel: #ffffff;
+  --line: #e4e5e0; --line-soft: #efefeb;
+  --text: #14161a; --muted: #6b7280; --faint: #9aa0a8;
+  --accent: #2f6bff; --accent-soft: #f2f5ff;
+  --ok: #12a150; --warn: #d98b00; --alert: #e5484d;
+  --r-card: 12px; --r-ctl: 8px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-size: 13px; line-height: 1.5; overflow-x: hidden;
+  font-family: "Inter", "Helvetica Neue", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  width: 100%; max-width: 1920px; margin: 0 auto; padding: clamp(16px, 1.6vw, 28px) clamp(16px, 1.8vw, 32px) 24px;
+}
+
+/* 数字统一用等宽数字，不用衬线体：一排 KPI 里数字跳动时不会互相推挤 */
+.num, .kpi .v, .rank-num, .summary-item b, table.data td, .clock { font-variant-numeric: tabular-nums; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+header h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.head-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.clock { font-size: 12px; color: var(--faint); }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+.dot.ok { background: var(--ok); }
+.dot.bad { background: var(--alert); }
+
+/* 分段控件：选中靠底色，不靠投影 */
+.toolbar { display: inline-flex; gap: 2px; flex-wrap: wrap; padding: 3px;
+           background: #f1f2ee; border-radius: var(--r-ctl); }
+.tab { padding: 5px 12px; border: 0; border-radius: 6px; cursor: pointer; font-family: inherit;
+       font-size: 12px; color: var(--muted); background: transparent; }
+.tab:hover { color: var(--text); }
+.tab.on { color: var(--text); background: #fff; font-weight: 500; }
+.tab:disabled { color: var(--faint); cursor: default; }
+.tab:focus-visible, .btn-quiet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.btn-quiet { border: 0; background: transparent; border-radius: var(--r-ctl); cursor: pointer;
+             font-family: inherit; font-size: 12px; color: var(--muted); padding: 6px 10px; }
+.btn-quiet:hover { background: #eaebe6; color: var(--text); }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px; margin-top: 20px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px 18px; }
+.kpi .k { font-size: 12px; color: var(--muted); }
+.kpi .v { margin-top: 10px; font-size: 36px; font-weight: 600; line-height: 1.1; letter-spacing: -.02em; }
+.kpi .v small { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--faint); letter-spacing: 0; }
+.kpi .foot { margin-top: 8px; font-size: 12px; color: var(--faint); }
+.kpi.alerting .v { color: var(--alert); }
+/* 数据健康一行要放下两个数，用正文数字号，不然撑成两行 */
+.kpi.health .v { font-size: 20px; letter-spacing: 0; }
+.kpi.health .v small { margin: 0 0 0 4px; }
+.kpi.health .v .late { color: var(--warn); }
+.kpi.health .v .invalid { color: var(--alert); }
+.kpi.health .v .sep { margin: 0 6px; color: #c9ccd2; }
+
+.grid { display: grid; grid-template-columns: 320px minmax(0, 1fr) 320px; gap: 12px; margin-top: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); padding: 18px; }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.card h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.card h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.hint { font-size: 12px; color: var(--faint); font-weight: 400; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+
+.chart-wrap { position: relative; margin-top: 8px; }
+.chart { width: 100%; height: 300px; }
+.chart.slim { height: 190px; }
+.empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+         font-size: 12px; color: var(--faint); pointer-events: none; }
+
+.rank-card { display: flex; flex-direction: column; }
+ol.rank { list-style: none; margin: 8px 0 0; padding: 0; }
+ol.rank li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+             padding: 8px; border-radius: var(--r-ctl); font-size: 13px; cursor: pointer; }
+ol.rank li:hover { background: #f7f7f4; }
+ol.rank li.sel { background: var(--accent-soft); }
+ol.rank li.sel .rank-name { color: var(--accent); }
+.badge { font-size: 12px; color: var(--faint); text-align: center; }
+.rank-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-bar { height: 4px; border-radius: 2px; background: #eef0ec; overflow: hidden; }
+.rank-bar > span { display: block; height: 100%; background: var(--accent); transition: width .2s linear; }
+.rank-num { font-size: 13px; }
+.rank-empty { display: block; padding: 16px 8px; color: var(--muted); font-size: 13px; }
+
+footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+         margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line);
+         font-size: 12px; color: var(--faint); }
+.fresh.warn { color: var(--warn); }
+.fresh.bad { color: var(--alert); }
+
+@media (max-width: 1500px) {
+  .grid { grid-template-columns: minmax(0, 1fr) 320px; }
+  .flow-card { grid-column: 1 / -1; }
+  .flow-card .flow-wrap { flex: none; height: 220px; }
+}
+@media (max-width: 1080px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .flow-card { grid-column: auto; }
+  .chart { height: 260px; }
+  .clock { display: none; }
+}
+@media (max-width: 560px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .head-right { gap: 8px; }
+}

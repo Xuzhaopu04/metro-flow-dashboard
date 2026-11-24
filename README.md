@@ -70,7 +70,7 @@ python simulator/simulator.py --replay data/samples/sample_events.json
 ├── api/              应用：模型、视图、路由、迁移
 ├── simulator/        数据模拟器
 ├── stream/           消费者与指标计算
-├── web/              index.html
+├── web/              页面壳、部分视图、css/js（每文件 ≤ 20KB）
 ├── tests/            pytest 用例
 ├── scripts/          本地启动脚本
 ├── data/samples/     固定样例数据（进 Git）
