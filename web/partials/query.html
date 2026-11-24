@@ -73,7 +73,7 @@
     <div class="control">
       <label>线路</label>
       <div class="toolbar">
-        <button v-for="opt in lineOptions" :key="opt.value" class="tab"
+        <button v-for="opt in queryLineOptions" :key="opt.value" class="tab"
                 :class="{ on: selectedLine === opt.value }"
                 @click="setLine(opt.value)">{{ opt.label }}</button>
       </div>

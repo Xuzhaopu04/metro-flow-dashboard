@@ -1,6 +1,6 @@
 // 客流查询视图：条件、请求、明细、导出。跟实时监看共用一份站点与快照状态。
 
-import { QUERY_TABLE_LIMIT, QUERY_MAX_STATIONS, getJSON, formatTs } from "./shared.js";
+import { QUERY_TABLE_LIMIT, QUERY_MAX_STATIONS, getJSON, formatTs, lineName } from "./shared.js";
 import { createQueryChart } from "./charts.js";
 
 export function createQueryPanel(deps) {
@@ -24,6 +24,20 @@ export function createQueryPanel(deps) {
   ];
   const selectedLine = ref("");         // 空串代表全部线路
   const selectedStations = ref([]);     // 空数组代表全部站点
+
+  // 查询页的"全部"必须用空串：实时页的 "all" 一旦当成线路编码发给接口，只会筛出空集。
+  // 线路名优先用 /api/stations，接口还没回来时退回固定名称，避免按钮突然消失。
+  const queryLineOptions = computed(() => {
+    const lines = stationMeta.value.lines.length
+      ? stationMeta.value.lines.map(item => ({
+          value: item.line_id, label: item.name || lineName(item.line_id)
+        }))
+      : [
+          { value: "L1", label: "1 号线" },
+          { value: "L2", label: "2 号线" }
+        ];
+    return [{ value: "", label: "全部线路" }, ...lines];
+  });
 
   const summary = ref(null);            // /api/summary/today
   const summaryLoading = ref(false);
@@ -196,7 +210,8 @@ export function createQueryPanel(deps) {
   }
 
   function setLine(value) {
-    selectedLine.value = value;
+    // 兼容旧链接里残留的 all
+    selectedLine.value = value === "all" ? "" : value;
     selectedStations.value = [];
     syncHash();
     loadQuery();
@@ -269,7 +284,8 @@ export function createQueryPanel(deps) {
     else if (rangeMode.value === "today") granularity.value = "minute";
     const dir = params.get("direction");
     if (["all", "in", "out"].includes(dir)) direction.value = dir;
-    selectedLine.value = params.get("line_id") || "";
+    const lineParam = params.get("line_id") || "";
+    selectedLine.value = lineParam === "all" ? "" : lineParam;
     const stationsParam = params.get("stations") || "";
     selectedStations.value = stationsParam.split(",").map(id => id.trim())
       .filter(Boolean).slice(0, QUERY_MAX_STATIONS);
@@ -353,7 +369,7 @@ export function createQueryPanel(deps) {
 
   return {
     minuteOptions, minutes, rangeMode, setRangeMode, setMinutes, granularity, granularityOptions,
-    setGranularity, direction, directionOptions, setDirection, selectedLine, setLine,
+    setGranularity, direction, directionOptions, setDirection, selectedLine, setLine, queryLineOptions,
     selectedStations, stationList, toggleStation, selectAllStations,
     summary, summaryLoading, summaryError, summaryLoaded, refreshAll,
     querySeries, queryRows, queryLoading, queryError, queryLoaded, queryTotal, queryPeak,
