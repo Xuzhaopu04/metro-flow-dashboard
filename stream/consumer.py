@@ -24,7 +24,7 @@ from config.env import load_env  # noqa: E402
 from stream.metrics import (  # noqa: E402
     aggregate_window,
     parse_time,
-    split_ready,
+    split_ready_indices,
     window_start_of,
 )
 
@@ -37,6 +37,7 @@ REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 EVENT_STREAM = os.environ.get("EVENT_STREAM", "gate_events")
 CONSUMER_GROUP = os.environ.get("CONSUMER_GROUP", "metric_builder")
+CONSUMER_NAME = os.environ.get("CONSUMER_NAME", "metric-builder")
 SNAPSHOT_KEY = os.environ.get("SNAPSHOT_KEY", "metric:snapshot")
 
 WINDOW_SECONDS = int(os.environ.get("WINDOW_SECONDS", "1"))
@@ -46,6 +47,8 @@ LATE_TOLERANCE_WINDOWS = int(os.environ.get("LATE_TOLERANCE_WINDOWS", "2"))
 BATCH_SIZE = 500
 BLOCK_MS = 500
 MAX_DEFERRED = 2000
+# 落库失败时先留在内存里重试；上限只防内存无限增长，超出部分保持未确认
+MAX_PERSIST_RETRY = 60
 
 log = logging.getLogger("consumer")
 
@@ -65,14 +68,19 @@ def ensure_group(client):
             raise
 
 
-def read_batch(client, consumer_name):
-    """读一批新事件，返回 (事件列表, 消息 ID 列表)。"""
+def read_batch(client, consumer_name, read_id=">"):
+    """读一批事件，返回 (事件列表, 消息 ID 列表)。
+
+    read_id 用 ">" 读新消息；启动时用 "0" 读本消费者遗留的 pending。
+    缺 data 字段的消息不能再跳过：跳过会连同 ACK 一起把一条坏消息抹掉，
+    口径上应该记一条非法。这里统一塞空事件，交给 aggregate_window 计数。
+    """
     response = client.xreadgroup(
         CONSUMER_GROUP,
         consumer_name,
-        {EVENT_STREAM: ">"},
+        {EVENT_STREAM: read_id},
         count=BATCH_SIZE,
-        block=BLOCK_MS,
+        block=BLOCK_MS if read_id == ">" else None,
     )
     events, msg_ids = [], []
     for _, messages in response or []:
@@ -80,6 +88,7 @@ def read_batch(client, consumer_name):
             msg_ids.append(msg_id)
             raw = fields.get("data")
             if not raw:
+                events.append({})
                 continue
             try:
                 events.append(json.loads(raw))
@@ -99,11 +108,17 @@ def build_snapshot(window_start, result):
     }
 
 
-def persist_window(window_start, result):
-    """按站点写入 metric_window。写库失败只降级，不影响快照。
+def persist_window(window_start, result) -> bool:
+    """按站点写入 metric_window，并写窗口级 metric_quality，返回是否成功。
 
-    v1.3 加法：同时写 in_passengers / out_passengers，按 event_type 拆分，
-    保证 passengers（乘降量）= in_passengers + out_passengers。
+    v1.3 加法：同时写 in_passengers / out_passengers，保证 passengers（乘降量）
+    = in_passengers + out_passengers。
+
+    写库失败必须返回 False：调用方据此不 ACK。若在这里吞掉异常还让消息被确认，
+    数据库恢复后也补不回这段历史，等于把一次抖动变成永久缺口。
+
+    同键改为 update_conflicts：重试或重放时以最新聚合覆盖。
+    ignore_conflicts 只能保证不重复，会把后到的、更完整的结果丢掉。
     """
     global _django_ready, _persist_warned
 
@@ -120,8 +135,6 @@ def persist_window(window_start, result):
         per_station.setdefault(
             station_id, {"passengers": 0, "in_passengers": 0, "out_passengers": 0}
         )
-    if not per_station:
-        return
 
     try:
         if not _django_ready:
@@ -131,7 +144,8 @@ def persist_window(window_start, result):
             django.setup()
             _django_ready = True
 
-        from api.models import MetricWindow
+        from api.models import MetricQuality, MetricWindow
+        from django.db import connection
 
         rows = [
             MetricWindow(
@@ -144,12 +158,37 @@ def persist_window(window_start, result):
             )
             for station_id, vals in per_station.items()
         ]
-        MetricWindow.objects.bulk_create(rows, ignore_conflicts=True)
+        if rows:
+            # MySQL 的 ON DUPLICATE KEY UPDATE 不接受 unique_fields，
+            # SQLite 的 ON CONFLICT DO UPDATE 又必须指定冲突列
+            upsert = {
+                "update_conflicts": True,
+                "update_fields": [
+                    "passengers",
+                    "in_passengers",
+                    "out_passengers",
+                    "late_count",
+                ],
+            }
+            if connection.vendor != "mysql":
+                upsert["unique_fields"] = ["ts", "station_id"]
+            MetricWindow.objects.bulk_create(rows, **upsert)
+        # 质量计数是窗口级：非法事件可能连站点都没有，不能等 per_station 非空才写
+        if rows or result["late_count"] or result["invalid_count"]:
+            MetricQuality.objects.update_or_create(
+                ts=window_start,
+                defaults={
+                    "late_count": result["late_count"],
+                    "invalid_count": result["invalid_count"],
+                },
+            )
         _persist_warned = False
+        return True
     except Exception as exc:  # 进程边界：数据库挂了也不能让采集停摆
         if not _persist_warned:
-            log.warning("落库失败（%s），先只写快照：%s", type(exc).__name__, exc)
+            log.warning("落库失败（%s），稍后重试：%s", type(exc).__name__, exc)
             _persist_warned = True
+        return False
 
 
 def _replay_bucket(events):
@@ -171,48 +210,118 @@ def _replay_bucket(events):
     return buckets
 
 
-def run_window(client, state, replay=False, first=False):
+def _retry_pending(client, state):
+    """补写上一轮落库失败的窗口；写成功后才确认对应消息。
+
+    快照已经发出去了，补写只影响历史与排行。重试队列放在内存里，
+    进程重启会丢，但消息仍未 ACK，重启后还能重新投递。
+    """
+    pending = state.get("persist_retry") or []
+    if not pending:
+        return
+
+    remaining = []
+    for item in pending:
+        if persist_window(item["ts"], item["result"]):
+            if item["ids"]:
+                client.xack(EVENT_STREAM, CONSUMER_GROUP, *item["ids"])
+            log.info(
+                "补写窗口 %s 成功，确认 %d 条消息",
+                item["ts"].isoformat(timespec="seconds"),
+                len(item["ids"]),
+            )
+        else:
+            remaining.append(item)
+
+    state["persist_retry"] = remaining
+    if len(remaining) > MAX_PERSIST_RETRY:
+        dropped = len(remaining) - MAX_PERSIST_RETRY
+        state["persist_retry"] = remaining[-MAX_PERSIST_RETRY:]
+        log.warning(
+            "落库重试队列超过 %d 个窗口，丢弃最早 %d 个（消息保持未确认）",
+            MAX_PERSIST_RETRY,
+            dropped,
+        )
+
+
+def run_window(client, state, replay=False, first=False, read_id=">"):
     """跑一个窗口：读数、切窗、聚合、写快照、落库、确认消息。
+
+    read_id="0" 用于启动时补消费本消费者遗留的 pending；正常循环用 ">"。
 
     replay=True 用于 backfill/回填：
       - 事件按 event_time 分桶，各自落在正确的历史窗口
       - 逐窗聚合、逐窗落库（ts 是历史窗口起点，不是 now）
       - 不写 SNAPSHOT_KEY，避免大屏被历史数据冲掉
       - 跳过迟到判定（ignore_late=True）
+
+    消息只在对应窗口落库成功后 ACK。落在下一窗口的事件先留在 deferred，
+    它的消息 ID 也一起留到下一轮，不能在当轮提前确认。
     """
     started = time.monotonic()
-    events, msg_ids = read_batch(client, state["name"])
+    events, msg_ids = read_batch(client, state["name"], read_id=read_id)
+
+    # 启动补消费时，没有 pending 就退出，别用空快照把刚恢复的大屏冲掉
+    if (read_id == "0" and not events and not state.get("deferred")
+            and not state.get("persist_retry")):
+        return 0
 
     if replay:
         # —— replay 路径：分桶 → 逐窗处理 → 不写快照 ——
-        buckets = _replay_bucket(state["deferred"] + events)
+        buckets = _replay_bucket(state.get("deferred", []) + events)
         state["deferred"] = []  # replay 不需要 deferred
+        state["deferred_ids"] = []
         windows_processed = 0
         total_passengers = 0
+        persist_ok = True
         for ws in sorted(buckets):
             result = aggregate_window(
                 buckets[ws], ws, WINDOW_SECONDS, LATE_TOLERANCE_WINDOWS,
                 ignore_late=True,
             )
-            persist_window(ws, result)
+            if not persist_window(ws, result):
+                persist_ok = False
             total_passengers += result["total"]
             windows_processed += 1
-        if msg_ids:
-            client.xack(EVENT_STREAM, CONSUMER_GROUP, *msg_ids)
+        if persist_ok:
+            if msg_ids:
+                client.xack(EVENT_STREAM, CONSUMER_GROUP, *msg_ids)
+        else:
+            # 任一窗口失败都不确认整批，消息留在 pending，重跑回放可补
+            log.warning("[REPLAY] 有窗口落库失败，消息保持未确认，可重跑回放")
         log.info(
             "[REPLAY] 处理 %d 个历史窗口，共 %d 客流",
-            windows_processed, total_passengers,
+            windows_processed,
+            total_passengers,
         )
         # replay 模式不 sleep，尽快把积压历史处理完
-        return
+        return len(msg_ids)
 
     # —— 正常路径：now() 做窗口起点 ——
     window_start = window_start_of(datetime.now(TZ), WINDOW_SECONDS)
     window_end = window_start + timedelta(seconds=WINDOW_SECONDS)
 
-    ready, state["deferred"] = split_ready(state["deferred"] + events, window_end)
+    # deferred 里的事件来自上一轮，消息 ID 必须跟着一起留到本轮
+    all_events = state.get("deferred", []) + events
+    all_ids = state.get("deferred_ids", []) + msg_ids
+    ready_idx, deferred_idx = split_ready_indices(all_events, window_end)
+
+    ready = [all_events[i] for i in ready_idx]
+    ready_ids = [all_ids[i] for i in ready_idx]
+    state["deferred"] = [all_events[i] for i in deferred_idx]
+    state["deferred_ids"] = [all_ids[i] for i in deferred_idx]
+
     if len(state["deferred"]) > MAX_DEFERRED:
+        dropped = len(state["deferred"]) - MAX_DEFERRED
         state["deferred"] = state["deferred"][-MAX_DEFERRED:]
+        state["deferred_ids"] = state["deferred_ids"][-MAX_DEFERRED:]
+        log.warning(
+            "deferred 超过 %d 条，丢弃最早 %d 条（消息保持未确认）",
+            MAX_DEFERRED,
+            dropped,
+        )
+
+    _retry_pending(client, state)
 
     result = aggregate_window(
         ready, window_start, WINDOW_SECONDS, LATE_TOLERANCE_WINDOWS,
@@ -220,10 +329,22 @@ def run_window(client, state, replay=False, first=False):
     )
     snapshot = build_snapshot(window_start, result)
     client.set(SNAPSHOT_KEY, json.dumps(snapshot, ensure_ascii=False), ex=SNAPSHOT_TTL)
-    persist_window(window_start, result)
 
-    if msg_ids:
-        client.xack(EVENT_STREAM, CONSUMER_GROUP, *msg_ids)
+    warned_before = _persist_warned
+    if persist_window(window_start, result):
+        if ready_ids:
+            client.xack(EVENT_STREAM, CONSUMER_GROUP, *ready_ids)
+    else:
+        # 不 ACK：消息留在 pending，下轮或重启后还能重试
+        state.setdefault("persist_retry", []).append(
+            {"ts": window_start, "result": result, "ids": ready_ids}
+        )
+        if not warned_before:
+            log.error(
+                "窗口 %s 落库失败，%d 条消息保持未确认并进入重试",
+                snapshot["ts"],
+                len(ready_ids),
+            )
 
     log.info(
         "%s 客流 %d 站点 %d 迟到 %d 非法 %d",
@@ -237,6 +358,22 @@ def run_window(client, state, replay=False, first=False):
     if not first:
         # 扣掉本轮耗时，否则每轮多睡 1 秒，窗口越跑越偏
         time.sleep(max(0.0, WINDOW_SECONDS - (time.monotonic() - started)))
+    return len(msg_ids)
+
+
+def drain_pending(client, state):
+    """启动时先补消费本消费者遗留的 pending。
+
+    消费者名固定后，重启仍是同一个名字，xreadgroup("0") 才读得到上次
+    未确认的消息。遇到 deferred 或落库失败就停，交给主循环处理，
+    避免在启动阶段原地打转。
+    """
+    while _running:
+        processed = run_window(client, state, first=True, read_id="0")
+        if not processed:
+            return
+        if state.get("deferred") or state.get("persist_retry"):
+            return
 
 
 def main() -> int:
@@ -268,7 +405,12 @@ def main() -> int:
         return 1
 
     ensure_group(client)
-    state = {"name": f"worker-{os.getpid()}", "deferred": []}
+    state = {
+        "name": CONSUMER_NAME,
+        "deferred": [],
+        "deferred_ids": [],
+        "persist_retry": [],
+    }
     signal.signal(signal.SIGINT, _stop)
     signal.signal(signal.SIGTERM, _stop)
     log.info("消费者 %s 启动，订阅 %s，窗口 %ss %s",
@@ -276,6 +418,9 @@ def main() -> int:
              "[REPLAY]" if args.replay else "")
 
     try:
+        # 正常模式重启后先把上次没确认的消息补完；回放模式不掺 pending
+        if not args.replay:
+            drain_pending(client, state)
         if args.once:
             run_window(client, state, replay=args.replay, first=True)
             return 0

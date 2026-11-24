@@ -23,6 +23,12 @@
 | 2026-11-17 | 兰天 | TraeCode | 文档 | 写 PR #17 评论：说明撞车已解决 + replay 修复内容与用法，经 gh CLI 发出 | 人工核对 diff --stat 与测试结果后定稿 | 直接采用 |
 | 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 编码 | 修复「客流查询切换线路后全空」：定位为 api/stations.py 把采集端嵌套 stations.json 的顶层当站点表，build_line_map 恒空；改为读取 stations 子层、线路名与颜色取顶层 lines，并补一条嵌套结构回归测试 | 人工核对契约 4.5 字段未变、前端无需改动；复现命令与修复后 curl 对比、pytest 127 passed、manage.py check 无 issue、make doctor 11 项全绿、1 号线查询页截图确认有图有明细 | 直接采用 |
 | 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 编码 | 修复「查询页选全部线路后仍为空」：查询页复用了实时页的 lineOptions，全部项的值是 all，setLine 把它当线路编码发出，后端按不存在的线路筛出空集；查询页改为独立的 queryLineOptions（全部用空串），并兼容旧链接里残留的 all | 人工核对两页语义差异与 hash 读写路径；line_id=all 旧链接截图确认有图、无 line_id 请求返回 297 点、pytest 127 passed、make doctor 全绿 | 直接采用 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 文档 | 按项目代码与真实运行结果写报告第三部分：启动 MySQL/Redis/消费者/模拟器/Django，截取采集、计算、服务、前端共 9 张图，写入“三、系统原型构建与实现”并插入 9 张图与 8 段代码 | 人工核对截图数值、接口字段与图号 3-1—3-9 的引用关系；逐句复核尚未完成 | 待人工复核 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 文档 | 按《实验报告文字风格指南》统一版式：38 个 Word 标题样式改为纯黑加粗段落（黑体），10 个表题改 10.5pt 加粗，18 张整版图统一 15.6cm；第三部分 9 处“见图 3-x”改“如下：”，38 个长段拆到 60 字内 | 核对第三部分以外文字逐段未变、23 图 10 表未动、标题颜色与字号；拆分后的断句尚未逐句复核 | 待人工复核 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 测试/编码 | 对实验做缺陷与有效性测试：只读核对真实 Redis/MySQL，定位并修复无时区时间崩溃、deferred 提前 ACK、落库失败仍 ACK、direction 改写 total、输入校验过宽、metric_quality 未写入、ignore_conflicts 丢更新等；新增固定消费者名与启动补消费，补回归用例，pytest 127→147 | 待人工逐条复核：契约 v1.5 的 total/写入策略、MySQL update_conflicts 无 unique_fields 分支、固定消费者名的单实例假设、补消费遇到迟到事件的处置；真实 MySQL/Redis 用隔离库验证后已 DROP/删键，测试阶段未动实验报告 | 待人工复核 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 文档 | 写报告第四部分并按第四部分统一第三部分口径：组件测试用 direction_sums 5 条路径，功能测试用等价类覆盖 5 组；第三部分 3-3/3-8 数字按截图重写，验收线改为 1.2 计划口径并注明未做连续压测；aggregate_window/run_window/int_param 三个代码片段替换为当前源码 | 待人工逐句复核：测试时间与测试人、P2 统计口径、2 秒与 10 分钟未实测的表述；改动第三部分 9 个段落与第四部分，未改第五部分 | 待人工复核 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 测试/文档 | 核对报告第四部分：实测 direction_sums 五条路径，比对表 4-2 的 37、minutes 1/60、290/273/233、12、26 与用例/截图；修正 4.4 的 P2 统计为“修复 5、缓解 1、文档澄清 1、剩余 4” | 147 用例与 manage.py check 重跑通过；表 4-2 的 minutes=1/60 为手工实测，自动化未单独覆盖 1 | 待人工复核 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 文档 | 补报告第一部分 1.2：新增不编号的用户故事清单（13 条，含角色、验收要点、对应模块），模板表1-1 角色列表、表1-2 用例列表保持原号；图 1-1 前补横轴主干活动与纵轴交付批次说明，图后按故事地图改写三批故事分布；Sprint 1 活动图数量由 3 张改 2 张 | 人工指出模板题号不重编，按模板恢复表1-1/1-2、故事清单不占编号；待逐条复核 13 条故事与 docs/01-需求/用户故事地图.md 一致、全文引用与表格跨页版式 | 待人工复核 |
 
 ## 填写说明
 

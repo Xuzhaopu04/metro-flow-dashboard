@@ -140,6 +140,23 @@ def test_snapshot_falls_back_on_broken_json(client, fake_redis):
     assert client.get("/api/snapshot").json()["total"] == 0
 
 
+def test_snapshot_sanitizes_wrong_types(client, fake_redis):
+    """合法 JSON 不等于合法快照：类型不对要降级，不能把异常抛成 500。"""
+    fake_redis(json.dumps({
+        "ts": 123,
+        "total": "37",
+        "stations": "oops",
+        "late_count": "x",
+        "invalid_count": [],
+    }))
+    body = client.get("/api/snapshot").json()
+    assert body["ts"] is None
+    assert body["total"] == 0
+    assert body["stations"] == []
+    assert body["late_count"] == 0 and body["invalid_count"] == 0
+    assert body["alerting"] is False
+
+
 @pytest.mark.django_db
 def test_series_aggregates_all_stations(client, base_ts):
     make_rows("A01", base_ts, passengers=2)
@@ -171,6 +188,17 @@ def test_series_rejects_bad_minutes(client, query):
     response = client.get(f"/api/series?{query}")
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "INVALID_PARAM"
+
+
+@pytest.mark.parametrize("url", ["/api/series?minutes=1_0", "/api/rank?top=1_0"])
+def test_integer_params_reject_python_syntax(client, url):
+    """int() 会接受 1_0，但契约里的整数只认十进制。"""
+    assert client.get(url).status_code == 400
+
+
+def test_integer_param_too_long_returns_400(client):
+    """超长数字触发 Python 整数字符串长度限制，也要按参数错误返回。"""
+    assert client.get("/api/series?minutes=" + "9" * 5000).status_code == 400
 
 
 @pytest.mark.django_db
@@ -298,11 +326,12 @@ def test_series_point_has_in_out_total(client, base_ts):
 
 @pytest.mark.django_db
 def test_series_direction_keeps_total(client, base_ts):
-    """切方向只影响分项，total 不变——否则总量口径会随筛选跳变。"""
+    """切方向只影响分项，total 恒为合并乘降量——否则总量口径会随筛选跳变。"""
     make_rows("A01", base_ts, count=1, passengers=10, in_p=7, out_p=3)
     only_in = client.get("/api/series?direction=in").json()["points"][0]
     assert only_in["in"] == 7 and only_in["out"] == 0
-    assert only_in["total"] == 7
+    assert only_in["total"] == 10
+    assert only_in["passengers"] == 10   # v1.2 兼容字段也是合并量
 
 
 def test_series_rejects_bad_direction(client):
@@ -479,6 +508,18 @@ def test_summary_quality_reads_quality_table(client, base_ts):
 
 
 @pytest.mark.django_db
+def test_summary_quality_combines_old_windows_without_quality(client, base_ts):
+    """消费者中途接入：旧窗口没有 quality 行，迟到仍要从 metric_window 补。"""
+    MetricQuality.objects.create(ts=base_ts, late_count=7, invalid_count=4)
+    make_rows("A01", base_ts, count=1, passengers=5, late=1)              # 已覆盖，不重复
+    make_rows("B01", base_ts + timedelta(seconds=2), count=1,
+              passengers=5, late=2)                                      # 旧窗口，无 quality
+    quality = client.get("/api/summary/today").json()["quality"]
+    assert quality["late_count"] == 9   # 7 + 2
+    assert quality["invalid_count"] == 4
+
+
+@pytest.mark.django_db
 def test_summary_quality_falls_back_to_window_late(client, base_ts):
     """过渡期新表为空：迟到回退到逐站累加，非法只能给 0。"""
     make_rows("A01", base_ts, count=1, passengers=5, late=2)
@@ -577,6 +618,8 @@ def test_rank_in_direction_is_sorted_by_in(client, base_ts, station_file):
     values = [row["in"] for row in top]
     assert values == sorted(values, reverse=True)
     assert [row["station_id"] for row in top] == ["A01", "C01", "B01"]
+    # 排序用进站量，但 passengers 仍是合并乘降量，不能跟着筛选缩水
+    assert [row["passengers"] for row in top] == [300, 273, 233]
 
 
 @pytest.mark.django_db
@@ -675,6 +718,14 @@ def test_summary_today_ignores_broken_cache(client, base_ts, cache_redis):
     """缓存内容坏了要回退查库，不能把坏数据吐给页面。"""
     make_rows("A01", base_ts, count=1, passengers=6)
     cache_redis.store[views.summary_cache_key()] = "{不是 JSON"
+    assert client.get("/api/summary/today").json()["total"] == 6
+
+
+@pytest.mark.django_db
+def test_summary_today_ignores_wrong_shape_cache(client, base_ts, cache_redis):
+    """合法 JSON 但字段类型不对，同样视为未命中。"""
+    make_rows("A01", base_ts, count=1, passengers=6)
+    cache_redis.store[views.summary_cache_key()] = '{"total": "not-a-number"}'
     assert client.get("/api/summary/today").json()["total"] == 6
 
 
