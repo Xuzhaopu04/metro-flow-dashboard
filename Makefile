@@ -1,5 +1,5 @@
 # 本地常用命令（Windows 上没有 make，就照右侧命令手动执行）
-.PHONY: install deps up down logs ps migrate makemigrations run produce consume sim test check clean
+.PHONY: install deps up down logs ps migrate makemigrations run produce consume sim test check doctor clean
 
 install:
 	python -m venv .venv
@@ -44,6 +44,10 @@ test:
 
 check:
 	python manage.py check
+
+# 一条命令查容器、进程、接口字段、事件流；只读，不改状态
+doctor:
+	python scripts/doctor.py
 
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
