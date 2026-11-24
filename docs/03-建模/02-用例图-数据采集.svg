@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="760" viewBox="0 0 1700 760" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：数据采集模块 用例图（坐标化 SVG）
+  规范：se-requirements-modeling references/01 §2–§5、§5.2 判定表；references/06 §1–§2（阈值与分区）、§3（标注语言）
+  对应：docs/01-需求/用例表.md  UC-01～UC-04
+  版本：v3（2026-11-23 按 06 §2 坐标化重绘）；v2 为 PlantUML 版（skinparam actorStyle awesome 已弃用），
+        v1 原图关联带箭头，均已废弃
+  规模：2 参与者 / 4 用例，未超阈值（06 §1）；按 06 §1.1「需与另一张图对齐符号」信号改用坐标化 SVG，
+        与 03、04 同一套符号，不回到自动布局
+  布局分区：左 x=290 主参与者；框内单列 x=790 按业务顺序自上而下；右 x=1400 外部系统；
+            椭圆 rx=130 ry=34，相邻纵向间距 140~155
+  节点清单
+    参与者  系统维护者(L,392)  实时计算模块（下游）«actor»(R,470)
+    用例    UC-02(790,170)  UC-01(790,325)  UC-03(790,475)  UC-04(790,615)
+  边清单
+    关联（无箭头实线）  系统维护者—UC-01、UC-02、UC-03、UC-04
+                        实时计算模块—UC-01、UC-04
+    依赖（虚线+开放箭头） UC-02 =«extend»=> UC-01（扩展点：指定速率与条数）
+                        UC-03 =«extend»=> UC-01（扩展点：按比例混入脏数据）
+  说明：UC-02、UC-03 同挂 UC-01，按 06 §2 规则 6（多扩展的排布）取"主用例居中、两个扩展上下相邻、
+        箭头垂直指向主用例"的布局；规则 3 的"扩展置右下"只对单个扩展成立，两个扩展都放右下会让
+        两条斜线在椭圆右端重叠。标签统一放虚线右侧，端点全为显式坐标。
+        本图不涉及 include，无 A10 豁免项。
+-->
+<defs>
+  <marker id="openArrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+    <path d="M1,1 L11,6 L1,11" fill="none" stroke="#4A6B8A" stroke-width="1.4"/>
+  </marker>
+</defs>
+<style>
+  .halo { paint-order: stroke; stroke: #FFFFFF; stroke-width: 4px; stroke-linejoin: round; }
+  text { user-select: none; }
+</style>
+<rect x="0" y="0" width="1700" height="760" fill="#FFFFFF"/>
+<rect x="470" y="70" width="640" height="600" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="790" y="106" text-anchor="middle" font-size="18" font-weight="700" fill="#2E5C8A">数据采集模块（simulator/）</text>
+<circle cx="290" cy="392" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="290" y1="405" x2="290" y2="428" stroke="#4A6B8A" stroke-width="1.6"/><line x1="273" y1="414" x2="307" y2="414" stroke="#4A6B8A" stroke-width="1.6"/><line x1="290" y1="428" x2="277" y2="446" stroke="#4A6B8A" stroke-width="1.6"/><line x1="290" y1="428" x2="303" y2="446" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="290" y="468" text-anchor="middle" font-size="13" fill="#1F2D3D">系统维护者</text>
+<circle cx="1400" cy="470" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1400" y1="483" x2="1400" y2="506" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1383" y1="492" x2="1417" y2="492" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1400" y1="506" x2="1387" y2="524" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1400" y1="506" x2="1413" y2="524" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="1400" y="546" text-anchor="middle" font-size="13" fill="#1F2D3D">实时计算模块（下游）</text><text x="1400" y="563" text-anchor="middle" font-size="12" font-style="italic" fill="#5A6472">«actor» 消费本模块产出</text>
+<ellipse cx="790" cy="170" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="790" y="175" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-02: 设置发送速率与数量</text>
+<ellipse cx="790" cy="325" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="790" y="330" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-01: 生成闸机事件</text>
+<ellipse cx="790" cy="475" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="790" y="480" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-03: 注入异常数据</text>
+<ellipse cx="790" cy="615" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="790" y="620" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-04: 回放历史样例</text>
+<line x1="307" y1="414" x2="660" y2="170" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="307" y1="414" x2="660" y2="325" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="307" y1="414" x2="660" y2="475" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="307" y1="414" x2="660" y2="615" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1383" y1="492" x2="920" y2="325" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1383" y1="492" x2="920" y2="615" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="790" y1="204" x2="790" y2="289" stroke="#4A6B8A" stroke-width="1.3" stroke-dasharray="7,5" marker-end="url(#openArrow)"/>
+<text x="806" y="232" text-anchor="start" font-size="12" fill="#2E5C8A" class="halo">«extend»</text>
+<text x="806" y="250" text-anchor="start" font-size="12" fill="#5A6472" class="halo">扩展点：指定速率与条数</text>
+<line x1="790" y1="441" x2="790" y2="361" stroke="#4A6B8A" stroke-width="1.3" stroke-dasharray="7,5" marker-end="url(#openArrow)"/>
+<text x="806" y="386" text-anchor="start" font-size="12" fill="#2E5C8A" class="halo">«extend»</text>
+<text x="806" y="404" text-anchor="start" font-size="12" fill="#5A6472" class="halo">扩展点：按比例混入脏数据</text>
+<text x="40" y="712" font-size="12.5" fill="#5A6472" class="halo">图注：所有关联为无箭头实线，只表示参与关系，不表示数据流向；UC-01、UC-04 的产出都写入 Stream gate_events（数据流见《数据流图》与《接口契约》2.1）。</text>
+<text x="40" y="732" font-size="12.5" fill="#5A6472" class="halo">UC-02、UC-03 是条件触发的可选行为——不指定速率、不注入脏数据也能完成 UC-01，故按 01 §5.2 判定表记为 «extend»，箭头由扩展用例指向主用例；「实时计算模块」在系统之外，标 «actor»。</text>
+</svg>
