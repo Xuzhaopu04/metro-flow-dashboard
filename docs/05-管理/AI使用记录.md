@@ -21,6 +21,8 @@
 | 2026-11-17 | 兰天 | TraeCode | 编码 | 解决采集 backfill 阻塞点：consumer 加 --replay 开关跳过迟到判定（方案 D）；采集队友反馈后修复——按 event_time 分桶逐窗落库、replay 不写 SNAPSHOT_KEY | 否决方案 A（放宽 late_threshold=2s 会污染实时口径，且阈值是指标口径 §4 定的，改它要先改文档）；首版只加 ignore_late，未解决 ts 堆 now 和写快照冲大屏，按队友反馈把 run_window 拆出 replay 路径重写；pytest 64→67 passed | 部分采纳（首版缺分桶与快照规避，经队友反馈修正） |
 | 2026-11-17 | 兰天 | TraeCode | 编码 | 与 feat/contract-v1.3 撞车去重：撤销本分支 api/models.py 改动、删除重复的 0002 进/出列 migration | 用户拍板"不改队友内容、撤自己重复改动"；进/出列与 migration 的归属让给服务端，本分支只留 stream/ 与测试；pytest 67 passed、api/ diff 清空 | 直接采用 |
 | 2026-11-17 | 兰天 | TraeCode | 文档 | 写 PR #17 评论：说明撞车已解决 + replay 修复内容与用法，经 gh CLI 发出 | 人工核对 diff --stat 与测试结果后定稿 | 直接采用 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 编码 | 修复「客流查询切换线路后全空」：定位为 api/stations.py 把采集端嵌套 stations.json 的顶层当站点表，build_line_map 恒空；改为读取 stations 子层、线路名与颜色取顶层 lines，并补一条嵌套结构回归测试 | 人工核对契约 4.5 字段未变、前端无需改动；复现命令与修复后 curl 对比、pytest 127 passed、manage.py check 无 issue、make doctor 11 项全绿、1 号线查询页截图确认有图有明细 | 直接采用 |
+| 2026-11-24 | xuzhaopu | CodeBuddy Code（DeepSeek-V4.1-Flash） | 编码 | 修复「查询页选全部线路后仍为空」：查询页复用了实时页的 lineOptions，全部项的值是 all，setLine 把它当线路编码发出，后端按不存在的线路筛出空集；查询页改为独立的 queryLineOptions（全部用空串），并兼容旧链接里残留的 all | 人工核对两页语义差异与 hash 读写路径；line_id=all 旧链接截图确认有图、无 line_id 请求返回 297 点、pytest 127 passed、make doctor 全绿 | 直接采用 |
 
 ## 填写说明
 
@@ -63,3 +65,25 @@
   结论：风格比选只作参考，不替换原方案。
 - 帮助抽屉首版：5 个标签 + 角色速查 + 链路节点卡 + 页面地图 + 命令表 + 6 条 FAQ，  
   信息密度过高、与首屏职责重复，否决，压成 3 个标签、2 张表、4 条 FAQ。
+
+实际使用（2026-11-24，编码环节）：
+
+```
+背景：大屏页面已经能用，但"AI 味"重：指标前的小圆点、品牌图标、眉标小字、
+      排行名次的彩色块、卡片投影、9.5—11px 的一堆小字号、同一句话写两遍
+      （标题说"近 5 分钟排行"，卡底再写一遍）。
+任务：按"只删不加"的原则去装饰，并把 78KB 的单文件按功能拆开。
+约束：不改接口与契约字段、不加新的运行时依赖（仍走 CDN，不引构建链）、
+      1 秒快照 / 5 秒历史、断线降级、空状态逻辑一律不动；
+      每个文件必须过 .githooks/pre-commit 的 20000 字节线。
+输出：先列清单说明删哪几条、拆成哪几个文件，再给代码。
+```
+
+改动落在三处，都能在 `git diff` 里逐条对：`web/`（拆成 index.html + partials + assets）、`config/settings.py`（STATIC_URL 改绝对路径并加 STATICFILES_DIRS）、`DESIGN.md`（把这次的判断写成约定）。
+
+被否决的方案（2026-11-24，编码环节）：
+
+- 引入 Node/Vite 构建链拆文件：能让单文件变小，但违背"前端 CDN 引入、不引构建链"的组内约定，否决。
+- 引 Lucide/Tabler 图标库：本页其实只有 ×、+、− 三个符号，直接删掉手画图标就够，多一个 CDN 依赖不值，否决。
+- 保留单文件、把钩子阈值调高：等于把"agent 读不动"的问题藏起来，且违反 AGENTS 里"照报错拆文件，不要绕过钩子"，否决。
+- 换成深色或另一套配色：值班现场已按浅色验收，换风格会让页面视觉断层（同 11-13 的结论），这次只做减法不动配色，否决。
