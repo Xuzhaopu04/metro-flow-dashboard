@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-10 获取实时快照 · 鲁棒图（数据服务模块 api/）
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-10 主事件流 1—3；04-用例图-数据服务.svg 参与者
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    大屏页面 @(100,250)
+    actor    op2   值班员 @(100,470)
+    boundary cli   :HTTP 接口 @(360,360)
+    control  svc   :快照查询服务 @(700,360)
+    entity   snap  :实时快照 @(1010,200)
+    external cache :快照缓存 Redis @(1010,480)
+  边清单
+    大屏页面 → :HTTP 接口  1：GET /api/snapshot
+    值班员 → :HTTP 接口  1.0：“查看看板数字”
+    :HTTP 接口 → :快照查询服务  1.1：解析请求（扇形展开 -6°）
+    :快照查询服务 → :快照缓存 Redis  2.1：GET metric:snapshot
+    :快照查询服务 → :实时快照  2.2：«create» 补齐字段
+    :快照查询服务 → :HTTP 接口  2.3：空则回空结构（扇形展开 6°）
+    :快照查询服务 → :HTTP 接口  3.1：200 + JSON（no-store）（扇形展开 18°）
+  覆盖：主事件流 1—3 全部活动；可选事件流 A1 / E1 / E2（快照缺失、Redis 不可用、JSON 损坏）统一走 2.3 的降级
+  假设：:实时快照 取自 14-域模型；2.2 的「补齐字段」把缓存 JSON 规整为快照对象，故标 «create»
+  假设：降级路径（空结构 + 200）由 2.3 回给边界，不额外画分支
+-->
+<rect x="0" y="0" width="1200" height="680" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-10 获取实时快照 · 鲁棒图（数据服务模块 api/）</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">主参与者是大屏页面（程序），次参与者是值班员（看数的人），按主/次上下分列</text>
+<circle cx="100" cy="210" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="221" x2="100" y2="256" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="231" x2="115" y2="231" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="256" x2="88" y2="277" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="256" x2="112" y2="277" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="302" text-anchor="middle" font-size="13" fill="#2b2b2b">大屏页面</text>
+<circle cx="100" cy="430" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="441" x2="100" y2="476" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="451" x2="115" y2="451" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="476" x2="88" y2="497" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="476" x2="112" y2="497" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="522" text-anchor="middle" font-size="13" fill="#2b2b2b">值班员</text>
+<circle cx="360" cy="360" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="340" x2="310" y2="380" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="360" x2="326" y2="360" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="416" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:HTTP 接口</text>
+<circle cx="700" cy="360" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,334.2 A45,45 0 0 1 736.9,334.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,334.2 L726.9,327.8 L734.2,322.6 Z" fill="#2b2b2b"/>
+<text x="700" y="430" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:快照查询服务</text>
+<circle cx="1010" cy="200" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="976" y1="241" x2="1044" y2="241" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="261" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:实时快照</text>
+<rect x="910.0" y="443.0" width="200" height="74" rx="8" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="472" text-anchor="middle" font-size="12" fill="#5a6472">«外部系统»</text>
+<text x="1010" y="498" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:快照缓存 Redis</text>
+<line x1="131.3" y1="263.2" x2="310.0" y2="338.8" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,338.8 L298.1,338.7 L301.6,330.4 Z" fill="#2b2b2b"/>
+<line x1="131.3" y1="456.8" x2="310.0" y2="381.2" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,381.2 L301.6,389.6 L298.1,381.3 Z" fill="#2b2b2b"/>
+<line x1="394.0" y1="360.0" x2="666.0" y2="360.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.0,360.0 L655.0,364.5 L655.0,355.5 Z" fill="#2b2b2b"/><path d="M394.0,360.0 L405.0,355.5 L405.0,364.5 Z" fill="#2b2b2b"/>
+<line x1="731.7" y1="372.3" x2="914.4" y2="443.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M914.4,443.0 L902.5,443.2 L905.8,434.8 Z" fill="#2b2b2b"/>
+<line x1="730.2" y1="344.4" x2="979.8" y2="215.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M979.8,215.6 L972.1,224.6 L967.9,216.6 Z" fill="#2b2b2b"/>
+<g><rect x="145.3" y="288.0" width="150.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="220.7" y="305.4" text-anchor="middle" font-size="12" fill="#2b2b2b">1：GET /api/snapshot</text>
+<g><rect x="146.8" y="406.0" width="147.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="220.7" y="423.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.0：“查看看板数字”</text>
+<g><rect x="432.7" y="332.0" width="194.6" height="56" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="530.0" y="349.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：解析请求</text>
+<text x="530.0" y="364.3" text-anchor="middle" font-size="12" fill="#2b2b2b">2.3：空则回空结构</text>
+<text x="530.0" y="379.3" text-anchor="middle" font-size="12" fill="#2b2b2b">3.1：200 + JSON（no-store）</text>
+<g><rect x="734.5" y="394.6" width="177.2" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="823.1" y="412.0" text-anchor="middle" font-size="12" fill="#2b2b2b">2.1：GET metric:snapshot</text>
+<g><rect x="760.0" y="272.2" width="170.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="845.0" y="289.5" text-anchor="middle" font-size="12" fill="#2b2b2b">2.2：«create» 补齐字段</text>
+<text x="40" y="624" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="650" font-size="12.5" fill="#5a6472">降级：快照不存在、Redis 不可用或 JSON 损坏时一律返回空结构与 200，不返回 404/500；响应头带 no-store。</text>
+</svg>

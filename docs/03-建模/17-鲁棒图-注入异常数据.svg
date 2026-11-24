@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="740" viewBox="0 0 1200 740" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-03 注入异常数据 · 鲁棒图
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-03 基本流 1—3；02-用例图-数据采集.svg（extend UC-01）
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    系统维护者 @(100,300)
+    boundary cli   :命令行界面 @(360,300)
+    control  svc   :事件生成服务 @(700,300)
+    entity   ev    :闸机事件 @(1010,300)
+    external rs    :Redis Stream @(1010,590)
+  边清单
+    系统维护者 → :命令行界面  1：“设置注入比例”
+    :命令行界面 → :事件生成服务  1.1：校验比例在 0—1（扇形展开 -6°）
+    :事件生成服务 → :闸机事件  2.2：抽样命中后改写字段
+    :事件生成服务 → :Redis Stream  3.1：XADD 照常写入
+  覆盖：基本流 1—3 全部活动；异常流 E1（比例超出 0—1）含在 1.1
+  假设：编号改用 UC-03 自身步号（v0 混用 UC-01 的 4.x / 5.x，无法与本文用例表对照）
+  假设：不设 :车站 —— 异常只作用于闸机事件，与用例表「异常作用于事件本身」一致
+  假设：v0 的「6.1 打印日志」在 UC-03 无对应活动，已删除
+  假设：2.1 按比例抽样是控制内部判定，命中后才有 2.2，故合并标注为 2.2
+-->
+<rect x="0" y="0" width="1200" height="740" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-03 注入异常数据 · 鲁棒图</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">异常作用于闸机事件本身、不作用于站点；注入后照常写入队列，由消费端统计</text>
+<circle cx="100" cy="260" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="271" x2="100" y2="306" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="281" x2="115" y2="281" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="88" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="112" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="352" text-anchor="middle" font-size="13" fill="#2b2b2b">系统维护者</text>
+<circle cx="360" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="280" x2="310" y2="320" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="300" x2="326" y2="300" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="356" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:命令行界面</text>
+<circle cx="700" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,274.2 A45,45 0 0 1 736.9,274.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,274.2 L726.9,267.8 L734.2,262.6 Z" fill="#2b2b2b"/>
+<text x="700" y="370" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:事件生成服务</text>
+<circle cx="1010" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="976" y1="341" x2="1044" y2="341" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="361" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:闸机事件</text>
+<rect x="910.0" y="553.0" width="200" height="74" rx="8" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="582" text-anchor="middle" font-size="12" fill="#5a6472">«外部系统»</text>
+<text x="1010" y="608" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:Redis Stream</text>
+<line x1="134.0" y1="300.0" x2="310.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,300.0 L299.0,304.5 L299.0,295.5 Z" fill="#2b2b2b"/>
+<line x1="393.8" y1="296.4" x2="666.2" y2="303.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.2,303.6 L655.1,307.8 L655.3,298.8 Z" fill="#2b2b2b"/>
+<line x1="734.0" y1="300.0" x2="976.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M976.0,300.0 L965.0,304.5 L965.0,295.5 Z" fill="#2b2b2b"/>
+<line x1="724.8" y1="323.2" x2="970.4" y2="553.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M970.4,553.0 L959.3,548.8 L965.5,542.2 Z" fill="#2b2b2b"/>
+<g><rect x="154.7" y="287.0" width="134.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="222.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1：“设置注入比例”</text>
+<g><rect x="458.2" y="287.0" width="143.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="530.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：校验比例在 0—1</text>
+<g><rect x="775.1" y="287.0" width="159.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="855.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">2.2：抽样命中后改写字段</text>
+<g><rect x="781.2" y="425.1" width="132.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="847.6" y="442.4" text-anchor="middle" font-size="12" fill="#2b2b2b">3.1：XADD 照常写入</text>
+<text x="40" y="684" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="710" font-size="12.5" fill="#5a6472">注入比例由参数 inject 给定。异常两类：缺字段（去掉 passengers 或 event_time）与乱序（事件时间回拨 3—30 秒）；比例超出 0—1 在 1.1 直接报错退出。</text>
+</svg>

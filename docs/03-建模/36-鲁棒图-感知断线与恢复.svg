@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-18 感知断线与恢复 · 鲁棒图（可视化展示模块 web/）
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-18 基本流 1—4；05-用例图-可视化展示.svg（extend UC-14）
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    值班员 @(100,300)
+    boundary cli   :大屏页面 @(360,300)
+    control  svc   :连接检测 @(700,300)
+    external api   :数据服务模块 @(1010,300)
+  边清单
+    值班员 → :大屏页面  1：“值守中持续轮询”
+    :大屏页面 → :连接检测  1.1：请求超时或非 2xx（扇形展开 -6°）
+    :连接检测 → :数据服务模块  3.1：按周期重试
+    :连接检测 → :大屏页面  2.1：状态改为「连接中断」（扇形展开 6°）
+    :连接检测 → :大屏页面  4.1：状态回到「实时连接」（扇形展开 14.7°）
+  覆盖：基本流 1—4 全部活动；异常流 E1（长时间断线）见图注
+  假设：不设实体：连接状态存在页面内存，域模型中没有对应概念
+  假设：本用例是 UC-14 的扩展，扩展点为「请求断线」，由 1.1 的失败触发
+-->
+<rect x="0" y="0" width="1200" height="600" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-18 感知断线与恢复 · 鲁棒图（可视化展示模块 web/）</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">连接状态是前端会话状态、不是持久化对象，故不设实体</text>
+<circle cx="100" cy="260" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="271" x2="100" y2="306" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="281" x2="115" y2="281" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="88" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="112" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="352" text-anchor="middle" font-size="13" fill="#2b2b2b">值班员</text>
+<circle cx="360" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="280" x2="310" y2="320" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="300" x2="326" y2="300" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="356" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:大屏页面</text>
+<circle cx="700" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,274.2 A45,45 0 0 1 736.9,274.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,274.2 L726.9,267.8 L734.2,262.6 Z" fill="#2b2b2b"/>
+<text x="700" y="370" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:连接检测</text>
+<rect x="910.0" y="263.0" width="200" height="74" rx="8" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="292" text-anchor="middle" font-size="12" fill="#5a6472">«外部系统»</text>
+<text x="1010" y="318" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:数据服务模块</text>
+<line x1="134.0" y1="300.0" x2="310.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,300.0 L299.0,304.5 L299.0,295.5 Z" fill="#2b2b2b"/>
+<line x1="394.0" y1="300.0" x2="666.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.0,300.0 L655.0,304.5 L655.0,295.5 Z" fill="#2b2b2b"/><path d="M394.0,300.0 L405.0,295.5 L405.0,304.5 Z" fill="#2b2b2b"/>
+<line x1="734.0" y1="300.0" x2="910.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M910.0,300.0 L899.0,304.5 L899.0,295.5 Z" fill="#2b2b2b"/>
+<g><rect x="148.7" y="287.0" width="146.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="222.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1：“值守中持续轮询”</text>
+<g><rect x="444.1" y="272.0" width="171.8" height="56" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="530.0" y="289.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：请求超时或非 2xx</text>
+<text x="530.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">2.1：状态改为「连接中断」</text>
+<text x="530.0" y="319.3" text-anchor="middle" font-size="12" fill="#2b2b2b">4.1：状态回到「实时连接」</text>
+<g><rect x="766.1" y="287.0" width="111.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="822.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">3.1：按周期重试</text>
+<text x="40" y="544" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="570" font-size="12.5" fill="#5a6472">异常流 E1：长时间断线时保留最后一次数据，但明确标注不是最新；恢复后无需人工刷新。</text>
+</svg>

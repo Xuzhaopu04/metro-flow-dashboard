@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="880" viewBox="0 0 1240 880" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-08 写快照与写入数据库 · 鲁棒图（实时计算模块 stream/）
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-08 基本流 1—4；03-用例图-实时计算.svg 参与者
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    计算进程 @(100,300)
+    boundary cli   :队列连接 @(360,300)
+    control  svc   :快照写入服务 @(700,300)
+    entity   snap  :实时快照 @(1010,150)
+    entity   win   :客流窗口 @(1010,400)
+    external ds    :数据服务模块 @(1130,620)
+    external db    :指标库 MySQL @(1010,790)
+  边清单
+    计算进程 → :队列连接  1：“触发写入”
+    :队列连接 → :快照写入服务  1.1：取本轮指标（扇形展开 -6°）
+    :快照写入服务 → :实时快照  1.2：«create» 组装快照
+    :快照写入服务 → :数据服务模块  2.1：写 metric:snapshot（TTL 5s）
+    :快照写入服务 → :客流窗口  3.1：«create» 明细行
+    :快照写入服务 → :指标库 MySQL  4.1：bulk_create 幂等
+  覆盖：基本流 1—4 全部活动；备选流 A1（无站点数据跳过写库）含在 3.1 / 4.1 之间；异常流 E1（库不可用只告警一次）见图注
+  假设：:实时快照 与 :客流窗口 均取自 14-域模型，分别对应快照 JSON 与明细行
+  假设：外部系统按用例图 03 取「数据服务模块」与「指标库」，不额外引入 Redis 作为第三方
+  假设：4.2 唯一键冲突忽略由数据库约束保证，属控制内部策略，不单独画线
+-->
+<rect x="0" y="0" width="1240" height="880" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-08 写快照与写入数据库 · 鲁棒图（实时计算模块 stream/）</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">快照与明细是两个落点：快照进缓存供接口读，明细进库供回溯与对账</text>
+<circle cx="100" cy="260" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="271" x2="100" y2="306" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="281" x2="115" y2="281" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="88" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="112" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="352" text-anchor="middle" font-size="13" fill="#2b2b2b">计算进程</text>
+<circle cx="360" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="280" x2="310" y2="320" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="300" x2="326" y2="300" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="356" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:队列连接</text>
+<circle cx="700" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,274.2 A45,45 0 0 1 736.9,274.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,274.2 L726.9,267.8 L734.2,262.6 Z" fill="#2b2b2b"/>
+<text x="700" y="396" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:快照写入服务</text>
+<circle cx="1010" cy="150" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="976" y1="191" x2="1044" y2="191" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="211" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:实时快照</text>
+<circle cx="1010" cy="400" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="976" y1="441" x2="1044" y2="441" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="461" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:客流窗口</text>
+<rect x="1030.0" y="583.0" width="200" height="74" rx="8" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1130" y="612" text-anchor="middle" font-size="12" fill="#5a6472">«外部系统»</text>
+<text x="1130" y="638" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:数据服务模块</text>
+<rect x="910.0" y="753.0" width="200" height="74" rx="8" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="782" text-anchor="middle" font-size="12" fill="#5a6472">«外部系统»</text>
+<text x="1010" y="808" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:指标库 MySQL</text>
+<line x1="134.0" y1="300.0" x2="310.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,300.0 L299.0,304.5 L299.0,295.5 Z" fill="#2b2b2b"/>
+<line x1="393.8" y1="296.4" x2="666.2" y2="303.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.2,303.6 L655.1,307.8 L655.3,298.8 Z" fill="#2b2b2b"/>
+<line x1="730.6" y1="285.2" x2="979.4" y2="164.8" stroke="#2b2b2b" stroke-width="1.8"/><path d="M979.4,164.8 L971.5,173.7 L967.5,165.5 Z" fill="#2b2b2b"/>
+<line x1="727.3" y1="320.3" x2="1080.3" y2="583.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M1080.3,583.0 L1068.8,580.0 L1074.1,572.8 Z" fill="#2b2b2b"/>
+<line x1="732.4" y1="310.4" x2="977.6" y2="389.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M977.6,389.6 L965.8,390.5 L968.6,381.9 Z" fill="#2b2b2b"/>
+<line x1="718.2" y1="328.7" x2="986.6" y2="753.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M986.6,753.0 L976.9,746.1 L984.5,741.3 Z" fill="#2b2b2b"/>
+<g><rect x="166.7" y="287.0" width="110.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="222.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1：“触发写入”</text>
+<g><rect x="474.1" y="287.0" width="111.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="530.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：取本轮指标</text>
+<g><rect x="770.0" y="212.0" width="170.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="855.0" y="229.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.2：«create» 组装快照</text>
+<g><rect x="730.8" y="396.6" width="233.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="847.3" y="413.9" text-anchor="middle" font-size="12" fill="#2b2b2b">2.1：写 metric:snapshot（TTL 5s）</text>
+<g><rect x="766.2" y="333.8" width="158.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="845.2" y="351.2" text-anchor="middle" font-size="12" fill="#2b2b2b">3.1：«create» 明细行</text>
+<g><rect x="774.9" y="527.9" width="155.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="852.4" y="545.2" text-anchor="middle" font-size="12" fill="#2b2b2b">4.1：bulk_create 幂等</text>
+<text x="40" y="824" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="850" font-size="12.5" fill="#5a6472">异常流 E1：数据库不可用时只告警一次，继续写快照，实时功能不受影响；4.1 依赖唯一键做幂等，重放不产生重复行。</text>
+</svg>
