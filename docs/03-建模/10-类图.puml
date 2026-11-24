@@ -1,13 +1,38 @@
 @startuml 10-类图
 ' =====================================================================
-' 产物：核心实现类图（数据模型 + 内部结构），对应报告第二章"数据建模"
-' 说明：本图出现数据库字段类型（BigAutoField）、表名、唯一键、函数返回值，
-'       属详细设计阶段的实现类图，不在《需求工程建模规范》的域模型范围内。
+' 产物：核心实现类图（数据模型 + 内部结构），对应报告第二章 2.2.1「用例实现」的
+'       表2-1 设计类清单与 3.1／3.2 数据库设计
+' 说明：本图出现数据库字段类型（BigAutoField）、表名、唯一键、函数返回值，属详细设计
+'       阶段的实现类图，不在《需求工程建模规范》的域模型范围内（§1 明确排除）。
 '       概念层（业务词汇与职责）看 14-域模型.puml，两者不要混用。
+'
+' 版本：v2（2026-11-24 按契约 v1.3／v1.4 同步）
+'   v1 的问题：MetricWindow 只有 ts / station_id / passengers / late_count 四列，
+'   缺 v1.3 新增的 in_passengers、out_passengers；v1.4 新增的 metric_quality 表
+'   没有对应类；WindowResult、StationStat 同样缺方向字段。若拿 v1 填表2-1、
+'   或与 3.2 的表2-3 字段清单对照，会当场自相矛盾。
+'   v2 改动：
+'     1. MetricWindow 补 in_passengers、out_passengers，并注明 passengers = in + out；
+'     2. 新增 MetricQuality（表 metric_quality，ts 唯一，每窗口一行）；
+'     3. WindowResult 补 in_total、out_total（aggregate_window 实际返回 7 个键）；
+'     4. StationStat 补 in_passengers、out_passengers（快照里每站带方向量）；
+'     5. MetricCalculator.aggregate_window 补两个形参 tolerance_windows、ignore_late。
+'
+' 字段口径一律以 docs/02-设计/接口契约.md 3.2、3.3 为准；改这张图先改契约。
+' 本图不画接口方法的入参校验（契约 4.2 的 400 分支），那属服务层行为，不是数据模型。
 ' =====================================================================
 title 核心实现类图（数据模型与内部结构）
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei"
 skinparam classAttributeIconSize 0
+skinparam ArrowColor #4A6B8A
+skinparam class {
+  BackgroundColor #F4F8FD
+  BorderColor #4A6B8A
+  ArrowColor #4A6B8A
+}
 hide circle
+hide empty members
 
 class GateEvent {
   + event_id : str
@@ -17,12 +42,14 @@ class GateEvent {
   + passengers : int
   + event_time : datetime
   --
-  契约第 2.1 节定义，
+  契约 2.1 定义，
   生产者与消费者共享
 }
 
 class WindowResult {
   + total : int
+  + in_total : int
+  + out_total : int
   + stations : list
   + late_count : int
   + invalid_count : int
@@ -36,6 +63,8 @@ class StationStat {
   + station_id : str
   + line_id : str
   + passengers : int
+  + in_passengers : int
+  + out_passengers : int
 }
 
 class MetricWindow {
@@ -43,10 +72,22 @@ class MetricWindow {
   + ts : datetime
   + station_id : str
   + passengers : int
+  + in_passengers : int
+  + out_passengers : int
   + late_count : int
   --
   表 metric_window
   唯一键 (ts, station_id)
+  passengers = in + out
+}
+
+class MetricQuality {
+  + ts : datetime
+  + late_count : int
+  + invalid_count : int
+  --
+  表 metric_quality（v1.4 新增）
+  ts 唯一：每窗口一行
 }
 
 class Snapshot {
@@ -63,14 +104,19 @@ class Snapshot {
 class MetricCalculator {
   + window_start_of(moment, seconds)
   + split_ready(events, window_end)
-  + aggregate_window(events, start, seconds)
+  + aggregate_window(events, start, seconds, tolerance_windows, ignore_late)
   + top_stations(stations, top)
 }
 
 GateEvent "1..*" --> WindowResult : 输入
 WindowResult *-- "0..*" StationStat
-WindowResult ..> Snapshot : 转换为对外结构
+WindowResult ..> Snapshot : 组装对外结构
 Snapshot o-- "0..*" StationStat
 MetricWindow ..> Snapshot : 历史聚合来源
 MetricCalculator ..> WindowResult : 产出
+MetricQuality "1" -- "0..*" MetricWindow : 同一窗口
+note on link
+  无外键：两表都只存窗口起点 ts，
+  靠 ts 对齐即可（契约 3.3）
+end note
 @enduml

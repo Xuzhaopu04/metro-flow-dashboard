@@ -1,0 +1,199 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="840" viewBox="0 0 1080 840" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：系统逻辑架构 · 包图（报告第二章 2.1.2「系统逻辑架构」，图 2-2）
+  规范：UML 包图。箭头是依赖，由依赖方指向被依赖方（虚线 + 开放箭头）；
+        不画数据流向——数据流见 09-数据流图.puml，两者不要混用。
+  依据：仓库实际 import 关系与文件读取关系，2026-11-24 逐条对代码核对
+  命名：包名 = 代码目录名；包内构件 = 实际文件名，评审时能直接对上
+  版本：v1（2026-11-24 新画；旧稿 docs/uml/09-package-arch.puml 与 包图参考.png 已删）
+
+  为什么用坐标化 SVG 而不是 PlantUML
+    包图不在《需求工程建模规范》四类产物内（§1 不适用），但 06 §1 的换工具判据同样成立：
+    自动布局把 api → simulator 这条跨层依赖拉成穿过 stream 的斜线，包内三个构件被排成
+    大块空白，整图 2.3:1 过宽插不进 A4 版心。用 SVG 是为了把四层压成竖向、把跨层依赖
+    赶进左侧专用通道。
+
+  包清单
+    web/        展示层：index.html（唯一页面）+ partials/ 两个片段 + assets/
+    api/        服务层：views.py / stations.py / models.py
+    stream/     计算层：consumer.py（消费编排）/ metrics.py（窗口聚合纯函数）
+    simulator/  接入层：simulator.py + stations.json（站点表唯一来源）
+    config/     配置层：env.py / settings.py / urls.py
+
+  依赖清单（箭头由依赖方指向被依赖方）
+    web       → api        调用接口：页面每秒轮询 /api/snapshot、/api/series、/api/rank、
+                           /api/summary/today、/api/stations 五个只读接口
+    stream    → api        复用模型定义：consumer.persist_window() 用 api/models.py 的
+                           MetricWindow / MetricQuality 写库，不另建一套映射
+    api       → simulator  读站点表：api/stations.py 直接读 simulator/stations.json，
+                           不复制一份（契约 4.5）
+    api       → config     读环境变量：REDIS_*、ALERT_THRESHOLD、SUMMARY_CACHE_TTL
+    stream    → config     读环境变量：REDIS_*、WINDOW_SECONDS、LATE_TOLERANCE_WINDOWS
+    simulator → config     读环境变量：REDIS_*、EVENT_STREAM、站点权重
+
+  与旧稿（09-package-arch.puml）的差异 —— 旧稿两处硬伤
+    1. 删「告警判定」「告警查询」两个组件：代码里不存在。告警是 api/views.py 的
+       alert_state() 现算的（契约 3.1：metric:snapshot 只存 5 个字段，消费者不写告警），
+       它属于服务层的一个函数，不是独立组件，更不能在计算层与服务层各画一个。
+    2. 删「总览页面」「线路与站点页面」两个组件：展示层只有 web/index.html 一张页面，
+       partials/query.html、partials/help.html 是同一页的两个片段，不是两张页面。
+    3. 箭头由「组件之间的数据流」改为「包与包之间的依赖方向」（提纲 2.1.2 的硬要求）。
+
+  两条能当答辩解释的口径
+    a. 运行期依赖里只有一处「向上」：stream → api（复用模型定义）。这是取舍不是疏忽——
+       模型即契约 3.2/3.3 的唯一实现，落库另写一套映射，字段口径必然漂移。
+    b. 装配型依赖不画：config/urls.py 挂载 api.urls、settings.TEMPLATES 指向 web/
+       （页面由 api.views.dashboard 同源渲染），都是进程启动时的装配，不引用包内业务代码。
+       画出来会与"分层单向"的读图预期打架，而它们不改变任何运行期调用关系；
+       本图只画运行期调用（web → api）与文件读取（api → simulator）。
+
+  布局（偏离 06 §2 用例图分区规则处写理由）
+    四层自上而下：web → api →（stream | simulator）→ config。
+    左侧 x=225 留一条竖直通道，专走 api → config 这条跨层依赖；若走直连必穿过 stream 框。
+    坐标：包体 x=300..1010；行高 106、行距 90；构件宽 223（三列）、160/150（两列）。
+-->
+<defs>
+  <marker id="dep" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+    <path d="M0,0 L9,5 L0,10" fill="none" stroke="#4A6B8A" stroke-width="1.4"/>
+  </marker>
+</defs>
+
+<rect x="0" y="0" width="1080" height="840" fill="#ffffff"/>
+
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1F2D3D">包图：系统逻辑架构（分层与依赖方向）</text>
+<text x="40" y="70" font-size="12" fill="#5A6472">虚线箭头 = 依赖，方向由依赖方指向被依赖方；数据流向见数据流图。包名与仓库目录一一对应。</text>
+
+<!-- ============ 展示层 web/ ============ -->
+<rect x="300" y="95" width="190" height="26" fill="#DCE9F7" stroke="#4A6B8A" stroke-width="1.4"/>
+<rect x="300" y="121" width="710" height="80" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="312" y="113" font-size="13" font-weight="700" fill="#1F2D3D">展示层　web/</text>
+
+<g>
+  <rect x="310" y="131" width="223" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M524,131 L533,140 L524,140 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="319" y="155" font-size="12" font-weight="600" fill="#1F2D3D">index.html</text>
+  <text x="319" y="173" font-size="10.5" fill="#5A6472">大屏页面（唯一页面）</text>
+</g>
+<g>
+  <rect x="543" y="131" width="223" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M757,131 L766,140 L757,140 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="552" y="155" font-size="12" font-weight="600" fill="#1F2D3D">partials/　2 个片段</text>
+  <text x="552" y="173" font-size="10.5" fill="#5A6472">query.html · help.html</text>
+</g>
+<g>
+  <rect x="776" y="131" width="223" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M990,131 L999,140 L990,140 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="785" y="155" font-size="12" font-weight="600" fill="#1F2D3D">assets/</text>
+  <text x="785" y="173" font-size="10.5" fill="#5A6472">轮询 · 图表渲染</text>
+</g>
+
+<!-- ============ 服务层 api/ ============ -->
+<rect x="300" y="291" width="190" height="26" fill="#DCE9F7" stroke="#4A6B8A" stroke-width="1.4"/>
+<rect x="300" y="317" width="710" height="80" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="312" y="309" font-size="13" font-weight="700" fill="#1F2D3D">服务层　api/</text>
+
+<g>
+  <rect x="310" y="327" width="223" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M524,327 L533,336 L524,336 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="319" y="351" font-size="12" font-weight="600" fill="#1F2D3D">views.py</text>
+  <text x="319" y="369" font-size="10.5" fill="#5A6472">5 个只读接口 · 告警现算</text>
+</g>
+<g>
+  <rect x="543" y="327" width="223" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M757,327 L766,336 L757,336 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="552" y="351" font-size="12" font-weight="600" fill="#1F2D3D">stations.py</text>
+  <text x="552" y="369" font-size="10.5" fill="#5A6472">站点元数据 · 线路映射</text>
+</g>
+<g>
+  <rect x="776" y="327" width="223" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M990,327 L999,336 L990,336 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="785" y="351" font-size="12" font-weight="600" fill="#1F2D3D">models.py</text>
+  <text x="785" y="369" font-size="10.5" fill="#5A6472">MetricWindow · MetricQuality</text>
+</g>
+
+<!-- ============ 计算层 stream/ ============ -->
+<rect x="300" y="487" width="215" height="26" fill="#DCE9F7" stroke="#4A6B8A" stroke-width="1.4"/>
+<rect x="300" y="513" width="350" height="80" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="312" y="505" font-size="13" font-weight="700" fill="#1F2D3D">计算层　stream/</text>
+
+<g>
+  <rect x="310" y="523" width="160" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M461,523 L470,532 L461,532 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="319" y="547" font-size="12" font-weight="600" fill="#1F2D3D">consumer.py</text>
+  <text x="319" y="565" font-size="10.5" fill="#5A6472">切窗 · 落库 · 确认</text>
+</g>
+<g>
+  <rect x="480" y="523" width="160" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M631,523 L640,532 L631,532 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="489" y="547" font-size="12" font-weight="600" fill="#1F2D3D">metrics.py</text>
+  <text x="489" y="565" font-size="10.5" fill="#5A6472">窗口聚合纯函数</text>
+</g>
+
+<!-- ============ 接入层 simulator/ ============ -->
+<rect x="680" y="487" width="230" height="26" fill="#DCE9F7" stroke="#4A6B8A" stroke-width="1.4"/>
+<rect x="680" y="513" width="330" height="80" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="692" y="505" font-size="13" font-weight="700" fill="#1F2D3D">接入层　simulator/</text>
+
+<g>
+  <rect x="690" y="523" width="150" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M831,523 L840,532 L831,532 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="699" y="547" font-size="12" font-weight="600" fill="#1F2D3D">simulator.py</text>
+  <text x="699" y="565" font-size="10.5" fill="#5A6472">生成 · 注入 · 回放</text>
+</g>
+<g>
+  <rect x="850" y="523" width="150" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M991,523 L1000,532 L991,532 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="859" y="547" font-size="12" font-weight="600" fill="#1F2D3D">stations.json</text>
+  <text x="859" y="565" font-size="10.5" fill="#5A6472">站点表（唯一来源）</text>
+</g>
+
+<!-- ============ 配置层 config/ ============ -->
+<rect x="300" y="683" width="215" height="26" fill="#DCE9F7" stroke="#4A6B8A" stroke-width="1.4"/>
+<rect x="300" y="709" width="710" height="80" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="312" y="701" font-size="13" font-weight="700" fill="#1F2D3D">配置层　config/</text>
+
+<g>
+  <rect x="310" y="719" width="330" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M631,719 L640,728 L631,728 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="319" y="743" font-size="12" font-weight="600" fill="#1F2D3D">env.py · settings.py</text>
+  <text x="319" y="761" font-size="10.5" fill="#5A6472">环境变量 · 数据库与缓存连接</text>
+</g>
+<g>
+  <rect x="650" y="719" width="223" height="56" fill="#FFFFFF" stroke="#7C93AB" stroke-width="1"/>
+  <path d="M864,719 L873,728 L864,728 Z" fill="#E3EDF8" stroke="#7C93AB" stroke-width="1"/>
+  <text x="659" y="743" font-size="12" font-weight="600" fill="#1F2D3D">urls.py</text>
+  <text x="659" y="761" font-size="10.5" fill="#5A6472">路由入口 · 统一错误结构</text>
+</g>
+
+<!-- ============ 依赖：web → api ============ -->
+<line x1="630" y1="201" x2="630" y2="317" stroke="#4A6B8A" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+<rect x="642" y="232" width="152" height="26" rx="5" fill="#FFFFFF" stroke="#C9D2DC" stroke-width="1"/>
+<text x="650" y="249" font-size="11" fill="#1F2D3D">调用接口（5 个只读接口）</text>
+
+<!-- ============ 依赖：stream → api（唯一一处向上） ============ -->
+<line x1="475" y1="487" x2="475" y2="397" stroke="#4A6B8A" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+<rect x="487" y="414" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#C9D2DC" stroke-width="1"/>
+<text x="495" y="431" font-size="11" fill="#1F2D3D">复用模型定义（写库）</text>
+
+<!-- ============ 依赖：api → simulator ============ -->
+<line x1="845" y1="397" x2="845" y2="487" stroke="#4A6B8A" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+<rect x="683" y="414" width="150" height="26" rx="5" fill="#FFFFFF" stroke="#C9D2DC" stroke-width="1"/>
+<text x="691" y="431" font-size="11" fill="#1F2D3D">读站点表（同一份表）</text>
+
+<!-- ============ 依赖：api → config（左侧通道绕行） ============ -->
+<path d="M300,330 L225,330 L225,736 L300,736" fill="none" stroke="#4A6B8A" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+<rect x="182" y="520" width="86" height="26" rx="5" fill="#FFFFFF" stroke="#C9D2DC" stroke-width="1"/>
+<text x="190" y="537" font-size="11" fill="#1F2D3D">读环境变量</text>
+
+<!-- ============ 依赖：stream → config ============ -->
+<line x1="475" y1="593" x2="475" y2="683" stroke="#4A6B8A" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+<rect x="487" y="612" width="86" height="26" rx="5" fill="#FFFFFF" stroke="#C9D2DC" stroke-width="1"/>
+<text x="495" y="629" font-size="11" fill="#1F2D3D">读环境变量</text>
+
+<!-- ============ 依赖：simulator → config ============ -->
+<line x1="845" y1="593" x2="845" y2="709" stroke="#4A6B8A" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#dep)"/>
+<rect x="857" y="612" width="86" height="26" rx="5" fill="#FFFFFF" stroke="#C9D2DC" stroke-width="1"/>
+<text x="865" y="629" font-size="11" fill="#1F2D3D">读环境变量</text>
+
+<text x="40" y="815" font-size="11" fill="#5A6472">注：告警不单设组件——alerting 与 threshold 由服务层按阈值现算（契约 3.1），metric:snapshot 只存 5 个字段；展示层只有 index.html 一张页面。</text>
+</svg>
