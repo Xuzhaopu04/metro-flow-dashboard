@@ -519,6 +519,27 @@ def test_stations_groups_lines(client, station_file):
     assert lines == {"L1": ["A01", "A02"], "L2": ["B01"]}
 
 
+@pytest.mark.django_db
+def test_stations_and_line_filter_handle_nested_collector_file(client, base_ts, station_file):
+    """采集端 stations.json 顶层是 {lines, stations}，读取必须落到 stations 上。
+
+    回归：曾把顶层当站点表，线路映射恒为空，所有带 line_id 的查询都返回空。
+    """
+    station_file({
+        "lines": {"L1": {"name": "1号线", "color": "#2F6BFF", "order": 1}},
+        "stations": {"A01": {"name": "人民广场", "line_id": "L1", "order": 1}},
+    })
+    body = client.get("/api/stations").json()
+    assert [s["station_id"] for s in body["stations"]] == ["A01"]
+    assert body["stations"][0]["name"] == "人民广场"
+    assert body["lines"] == [{"line_id": "L1", "name": "1号线", "color": "#2F6BFF",
+                              "station_ids": ["A01"]}]
+
+    make_rows("A01", base_ts, count=1, passengers=5)
+    points = client.get("/api/series?line_id=L1").json()["points"]
+    assert len(points) == 1 and points[0]["total"] == 5
+
+
 def test_stations_missing_file_returns_empty(client, tmp_path, monkeypatch):
     """站点表丢了只该影响这个接口，返回空列表并留日志，不能 500。"""
     missing = tmp_path / "nope.json"

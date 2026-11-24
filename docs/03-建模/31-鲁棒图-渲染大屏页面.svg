@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-13 渲染大屏页面 · 鲁棒图（数据服务模块 api/）
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-13 主事件流 1—3；04-用例图-数据服务.svg 参与者
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    值班员 @(100,300)
+    boundary cli   :HTTP 接口 @(360,300)
+    control  svc   :页面渲染服务 @(700,300)
+  边清单
+    值班员 → :HTTP 接口  1：“打开看板根路径”
+    :HTTP 接口 → :页面渲染服务  1.1：请求 /（扇形展开 -6°）
+    :页面渲染服务 → :HTTP 接口  2.1：返回页面模板（同源）（扇形展开 6°）
+  覆盖：主事件流 1—3 全部活动；可选事件流 A1（CDN 不可达）与 E1（模板语法错误）见图注
+  假设：不设实体：本用例的输出是页面模板，不是域模型中的持久化概念，按「不编造实体」原则留空
+  假设：CDN 未在 04-用例图中列为外部系统，本图不擅自引入，只在图注说明
+-->
+<rect x="0" y="0" width="1200" height="520" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-13 渲染大屏页面 · 鲁棒图（数据服务模块 api/）</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">页面与接口同源，省掉跨域配置；本用例 include UC-10，快照取值不在此重复</text>
+<circle cx="100" cy="260" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="271" x2="100" y2="306" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="281" x2="115" y2="281" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="88" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="112" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="352" text-anchor="middle" font-size="13" fill="#2b2b2b">值班员</text>
+<circle cx="360" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="280" x2="310" y2="320" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="300" x2="326" y2="300" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="356" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:HTTP 接口</text>
+<circle cx="700" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,274.2 A45,45 0 0 1 736.9,274.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,274.2 L726.9,267.8 L734.2,262.6 Z" fill="#2b2b2b"/>
+<text x="700" y="370" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:页面渲染服务</text>
+<line x1="134.0" y1="300.0" x2="310.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,300.0 L299.0,304.5 L299.0,295.5 Z" fill="#2b2b2b"/>
+<line x1="393.8" y1="303.6" x2="666.2" y2="296.4" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.2,296.4 L655.3,301.2 L655.1,292.2 Z" fill="#2b2b2b"/>
+<line x1="666.2" y1="296.4" x2="393.8" y2="303.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M393.8,303.6 L404.7,298.8 L404.9,307.8 Z" fill="#2b2b2b"/>
+<g><rect x="148.7" y="287.0" width="146.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="222.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1：“打开看板根路径”</text>
+<g><rect x="471.9" y="269.4" width="89.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="516.4" y="286.7" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：请求 /</text>
+<g><rect x="455.0" y="304.7" width="171.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="540.9" y="322.0" text-anchor="middle" font-size="12" fill="#2b2b2b">2.1：返回页面模板（同源）</text>
+<text x="40" y="464" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="490" font-size="12.5" fill="#5a6472">可选事件流 A1：CDN 不可达时图表区不渲染，顶部数字仍可显示；E1：模板语法错误返回 500。CDN 未列入用例图，未画。</text>
+</svg>

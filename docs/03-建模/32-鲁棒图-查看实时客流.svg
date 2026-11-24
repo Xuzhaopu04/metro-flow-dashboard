@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-14 查看实时客流 · 鲁棒图（可视化展示模块 web/）
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-14 基本流 1—3；05-用例图-可视化展示.svg 参与者
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    值班员 @(100,300)
+    boundary cli   :大屏页面 @(360,300)
+    control  svc   :看板控制器 @(700,300)
+    entity   snap  :实时快照 @(1010,220)
+    external api   :数据服务模块 @(1010,500)
+  边清单
+    值班员 → :大屏页面  1：“查看实时客流”
+    :大屏页面 → :看板控制器  1.1：启动每秒轮询（扇形展开 -6°）
+    :看板控制器 → :数据服务模块  1.2：GET /api/snapshot
+    :看板控制器 → :实时快照  2.1：更新顶部总客流（扇形展开 -8.7°）
+    :看板控制器 → :实时快照  3.1：柱状图降序重绘（扇形展开 8.7°）
+  覆盖：基本流 1—3 全部活动；备选流 A1（快照为空显示暂无数据）含在 2.1；异常流 E1（请求失败）转 UC-18
+  假设：前端模块没有自己的域类，实体取接口返回的 :实时快照（14-域模型 同名类），只读使用
+  假设：UC-15 / UC-17 / UC-18 都是本用例的扩展，插入点见图注，本图不展开
+-->
+<rect x="0" y="0" width="1200" height="680" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-14 查看实时客流 · 鲁棒图（可视化展示模块 web/）</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">前端用例：边界就是页面本身，控制是页面控制器，实体是接口取回的实时快照</text>
+<circle cx="100" cy="260" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="271" x2="100" y2="306" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="281" x2="115" y2="281" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="88" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="112" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="352" text-anchor="middle" font-size="13" fill="#2b2b2b">值班员</text>
+<circle cx="360" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="280" x2="310" y2="320" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="300" x2="326" y2="300" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="356" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:大屏页面</text>
+<circle cx="700" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,274.2 A45,45 0 0 1 736.9,274.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,274.2 L726.9,267.8 L734.2,262.6 Z" fill="#2b2b2b"/>
+<text x="700" y="370" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:看板控制器</text>
+<circle cx="1010" cy="220" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="976" y1="261" x2="1044" y2="261" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="281" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:实时快照</text>
+<rect x="910.0" y="463.0" width="200" height="74" rx="8" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="492" text-anchor="middle" font-size="12" fill="#5a6472">«外部系统»</text>
+<text x="1010" y="518" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:数据服务模块</text>
+<line x1="134.0" y1="300.0" x2="310.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,300.0 L299.0,304.5 L299.0,295.5 Z" fill="#2b2b2b"/>
+<line x1="393.8" y1="296.4" x2="666.2" y2="303.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.2,303.6 L655.1,307.8 L655.3,298.8 Z" fill="#2b2b2b"/>
+<line x1="728.6" y1="318.4" x2="952.6" y2="463.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M952.6,463.0 L941.0,460.8 L945.8,453.3 Z" fill="#2b2b2b"/>
+<line x1="733.8" y1="296.6" x2="976.2" y2="223.4" stroke="#2b2b2b" stroke-width="1.8"/><path d="M976.2,223.4 L966.9,230.9 L964.3,222.3 Z" fill="#2b2b2b"/>
+<line x1="731.3" y1="286.6" x2="978.7" y2="233.4" stroke="#2b2b2b" stroke-width="1.8"/><path d="M978.7,233.4 L968.9,240.1 L967.0,231.3 Z" fill="#2b2b2b"/>
+<g><rect x="154.7" y="287.0" width="134.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="222.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1：“查看实时客流”</text>
+<g><rect x="468.1" y="287.0" width="123.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="530.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：启动每秒轮询</text>
+<g><rect x="758.6" y="377.7" width="164.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="840.6" y="395.0" text-anchor="middle" font-size="12" fill="#2b2b2b">1.2：GET /api/snapshot</text>
+<g><rect x="775.0" y="232.7" width="135.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="842.9" y="250.0" text-anchor="middle" font-size="12" fill="#2b2b2b">2.1：更新顶部总客流</text>
+<g><rect x="774.7" y="267.7" width="135.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="842.6" y="285.0" text-anchor="middle" font-size="12" fill="#2b2b2b">3.1：柱状图降序重绘</text>
+<text x="40" y="624" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="650" font-size="12.5" fill="#5a6472">备选流 A1：快照为空时图表留空并显示「暂无数据」；异常流 E1：请求失败转入 UC-18（36 号图）。UC-15 扩展点在 1.1 之后，UC-17 在 2.1 之后。</text>
+</svg>

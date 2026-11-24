@@ -1,0 +1,59 @@
+@startuml 41-时序图-断线与恢复
+' =====================================================================
+' 产物：UC-18 感知断线与恢复 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：36-鲁棒图-感知断线与恢复.svg（对象名逐字沿用）；用例表 UC-18 基本流 1—4
+' 覆盖：基本流 1—4 全部活动；异常流 E1（长时间断线保留最后数据）见图注
+' 假设：A1 UC-18 是 UC-14 的扩展，扩展点为「请求断线」，由 1.1 的失败触发
+'       A2 连接状态存在页面内存，不是域对象，故本图不含实体（与 36 号鲁棒图一致）
+' =====================================================================
+title UC-18 感知断线与恢复：失败即转态，恢复即续数
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "值班员" as OP
+boundary ":大屏页面" as UI
+control ":连接检测" as NET
+participant ":数据服务模块" as API <<外部系统>>
+
+OP -> UI : 1：“值守中持续轮询”
+activate UI
+UI -> NET : 1.1：请求超时或非 2xx
+activate NET
+NET -> UI : 2.1：状态改为「连接中断，正在重试」
+
+loop 按原周期重试
+  NET -> API : 3.1：重试 GET /api/snapshot
+  activate API
+  alt 仍然失败
+    API --> NET : 超时 / 5xx
+    note right of NET
+      保留最后一次数据，
+      并标注「不是最新」
+      （异常流 E1）
+    end note
+  else 恢复成功
+    API --> NET : 200 + 快照 JSON
+    NET -> UI : 4.1：状态回到「实时连接」，数据续上
+  end
+  deactivate API
+end
+
+deactivate NET
+deactivate UI
+UI --> OP
+@enduml

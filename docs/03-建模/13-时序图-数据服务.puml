@@ -1,67 +1,136 @@
 @startuml 13-时序图-数据服务
-title 数据服务模块：三个接口的请求处理与降级路径
-autonumber
+' =====================================================================
+' 产物：数据服务模块 四个接口的请求处理与降级路径 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：28/29/30/31-鲁棒图（对象名逐字沿用）；用例表 UC-10、UC-11、UC-12、UC-13
+' 覆盖：四个用例的主事件流全部步；UC-10 的快照缺失/缓存不可用、UC-11 与 UC-12 的参数越界与库不可用走 alt
+' 假设：A1 每个用例一个控制组件（与 28–31 号鲁棒图一致），不合并成「接口控制器」
+'       A2 编号用各用例自身步号，用 == 分节标明属于哪个用例；同一对组件的多条消息靠分区区分
+'       A3 页面渲染（UC-13）没有持久化对象，只画到边界与控制之间
+' =====================================================================
+title 数据服务模块：四个接口的请求处理与降级路径
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequenceDividerBackgroundColor #EEF3F8
+skinparam sequenceDividerBorderColor #B8C6D6
+skinparam sequenceDividerFontColor #2E5C8A
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
 
-participant "浏览器\nweb/index.html" as WEB
-participant "接口\napi/views.py" as API
-participant "Redis\nmetric:snapshot" as SNAP
-participant "MySQL\nmetric_window" as DB
+actor "大屏页面" as UI
+boundary ":HTTP 接口" as API
+control ":快照查询服务" as QRY
+control ":序列查询服务" as SER
+control ":排行查询服务" as RNK
+control ":页面渲染服务" as RND
+entity ":实时快照" as SS
+entity ":客流窗口" as WIN
+entity ":车站" as ST
+participant ":快照缓存 Redis" as CACHE <<外部系统>>
+participant ":指标库 MySQL" as DB <<外部系统>>
 
-== UC-10 最新快照 GET /api/snapshot（每秒） ==
-WEB -> API : GET /api/snapshot
-API -> SNAP : GET metric:snapshot
-alt 快照存在
-  SNAP --> API : 快照 JSON
-  API -> API : normalize_snapshot 补齐字段
-  API --> WEB : 200 + 数据，Cache-Control: no-store
-else 键过期 / Redis 不可用 / JSON 损坏 / 非对象
-  SNAP --> API : 空 或 坏数据
-  API --> WEB : 200 + 空结构（不返回 404，也不返回 500）
-  WEB -> WEB : 显示"暂无数据"
+== UC-10 获取实时快照（GET /api/snapshot，每秒） ==
+UI -> API : 1：GET /api/snapshot
+activate API
+API -> QRY : 1.1：解析请求
+activate QRY
+QRY -> CACHE : 2.1：GET metric:snapshot
+activate CACHE
+alt 快照有效
+  CACHE --> QRY : 快照 JSON
+  deactivate CACHE
+  QRY -> SS : 2.2：«create» 补齐字段
+  activate SS
+  QRY --> API : 3.1：200 + 数据（no-store）
+  deactivate SS
+else 过期 / 缓存不可用 / JSON 损坏
+  CACHE --> QRY : 空或坏数据
+  deactivate CACHE
+  QRY --> API : 2.3：200 + 空结构
 end
+API --> UI : 响应
+deactivate QRY
+deactivate API
 
-== UC-11 历史序列 GET /api/series ==
-WEB -> API : GET /api/series?minutes=
-API -> API : int_param 校验 minutes 在 1—60
+== UC-11 查询历史序列（GET /api/series） ==
+UI -> API : 1：GET /api/series?minutes=
+activate API
+API -> SER : 1.1：校验 minutes 在 1—60
+activate SER
 alt 参数不合法
-  API --> WEB : 400 INVALID_PARAM
+  SER --> API : 2.1：400 INVALID_PARAM
 else 参数合法
-  API -> DB : filter(ts>=now-minutes)\nvalues(ts).annotate(Sum)
-  alt 查询成功
-    DB --> API : 聚合行
-    API -> API : local_iso 换算到 +08:00
-    API --> WEB : 200 {station_id, points}
-  else MySQL 不可用（DatabaseError）
-    DB --> API : 异常
-    API -> API : 记 warning 日志
-    API --> WEB : 200 {station_id, points:[]}（降级）
-  end
+  SER -> WIN : 3.1：按时间范围过滤
+  activate WIN
+  SER -> ST : 3.2：按站点过滤
+  activate ST
+  SER -> DB : 4.1：aggregate(Sum) 升序
+  activate DB
+  DB --> SER : 聚合行
+  deactivate DB
+  deactivate ST
+  deactivate WIN
+  SER --> API : 200 {station_id, points}
 end
+API --> UI : 响应
+deactivate SER
+deactivate API
 
-== UC-12 站点排行 GET /api/rank ==
-WEB -> API : GET /api/rank?top=
-API -> API : int_param 校验 top 在 1—20
+== UC-12 查询站点排行（GET /api/rank） ==
+UI -> API : 1：GET /api/rank?top=
+activate API
+API -> RNK : 1.1：校验 top 在 1—20
+activate RNK
 alt 参数不合法
-  API --> WEB : 400 INVALID_PARAM
+  RNK --> API : 2.1：400 INVALID_PARAM
 else 参数合法
-  API -> DB : 固定最近 5 分钟\n按站 Sum 后降序取前 N
-  alt 查询成功
-    DB --> API : 排行行
-    API --> WEB : 200 {top:[{station_id, passengers}]}
-  else MySQL 不可用（DatabaseError）
-    DB --> API : 异常
-    API -> API : 记 warning 日志
-    API --> WEB : 200 {top:[]}（降级）
+  RNK -> WIN : 3.1：取最近 5 分钟
+  activate WIN
+  RNK -> ST : 4.1：按站求和后降序
+  activate ST
+  RNK -> DB : 4.2：查询并聚合
+  activate DB
+  alt 库可用
+    DB --> RNK : 排行行
+  else 库不可用
+    DB --> RNK : DatabaseError
+    note right of RNK
+      记 warning 日志，
+      返回空 top 降级
+    end note
   end
+  deactivate DB
+  deactivate ST
+  deactivate WIN
+  RNK --> API : 200 {top:[...]}
 end
+API --> UI : 响应
+deactivate RNK
+deactivate API
 
-== UC-13 未匹配路径 ==
-WEB -> API : GET /api/任意不存在路径
-API --> WEB : 404 NOT_FOUND
+== UC-13 渲染大屏页面（GET /） ==
+UI -> API : 1：“打开看板根路径”
+activate API
+API -> RND : 1.1：渲染页面模板
+activate RND
+RND --> API : 2.1：页面 HTML（同源）
+deactivate RND
+API --> UI : 200 + 页面
+deactivate API
 note right of API
-  兜底路由保证 DEBUG=1 时
-  也返回 JSON 而不是 HTML 报错页
-  DEBUG=0 时由 handler404 接管
+  未匹配路径由兜底路由返回
+  404 JSON，不回 HTML 报错页
 end note
-
 @enduml

@@ -1,0 +1,115 @@
+@startuml 44-活动图-窗口聚合程序逻辑
+' =====================================================================
+' 产物：窗口聚合程序逻辑 活动图（报告第二章 2.2.2「关键程序逻辑设计」；正文图号以报告为准，
+'       它排在 2.2.1 的鲁棒图／序列图之后）
+' 规范：UML 活动图；符号与守卫规则同《需求工程建模规范》references/03 §3–§4
+' 依据：stream/consumer.py run_window() L174—239、read_batch() L68—89、
+'       persist_window() L102—152；stream/metrics.py window_start_of() L17—20、
+'       split_ready() L23—38、aggregate_window() L41—115
+' 版本：v1（2026-11-24 新画；仓库原有 06／07／08 三张是用例级活动图，不是这一张）
+'
+' 与 06 号图的分工（必须写清，否则会被当成重复引用）
+'   06 号：用例视角，按 UC-06／UC-07 主事件流画"谁做了什么"，含"窗口已到期?"这类业务判断，
+'          用在报告第一章 1.3；活动编号 = 用例表步号。
+'   本图：程序视角，画一次 run_window 的调用顺序，以及 aggregate_window 内部的
+'          "取数 → 校验 → 判迟到 → 累加 → 产出"，用在第二章 2.2.2；
+'          活动编号 = 代码执行顺序，活动名前缀是函数名，可与源码逐行对上。
+'   两处实质差别：① 切窗方式——本图是 now 向下取整到整秒，不是"等窗口到期"；
+'                 ② 迟到门槛是"窗口起点 − 2 个窗口"的绝对时刻，不是相对当前时间。
+'
+' 节点清单（编号 | 活动 | 函数 | 代码位置 | 对应用例步）
+'   1  | 取一批事件（count=500，阻塞 500 ms）        | read_batch       | consumer L68—89   | UC-05 步2、3
+'   2  | 对齐窗口起点并把窗口结束算成起点 + 1 秒      | window_start_of  | consumer L210—211 | UC-06 步1、2
+'   3  | 取一条事件并解析 event_time                 | split_ready      | metrics L30—36    | UC-06 步3
+'   4  | 解析不了：原样放进 ready（留给聚合记非法）    | split_ready      | metrics L33—35    | UC-07 步1
+'   5  | 属于后续窗口：放进 deferred                  | split_ready      | metrics L36       | UC-06 步4
+'   6  | 属于本窗口：放进 ready                      | split_ready      | metrics L36       | UC-06 步3
+'   7  | 暂存超 2000 条：只保留最近 2000 条（[否] 支路无动作，直接汇合）| run_window | consumer L214—215 | UC-06 异常流 E1
+'   8  | 计算迟到门槛 = 窗口起点 − 2 个窗口           | aggregate_window | metrics L55       | UC-07 步3 前置
+'   9  | 取一条事件并解析三个字段                     | aggregate_window | metrics L66—79    | UC-07 步1
+'   10 | 非法数 + 1 并跳过该条                       | aggregate_window | metrics L70—79    | UC-07 步2
+'   11 | 早于迟到门槛：迟到数 + 1 并按站点计数        | aggregate_window | metrics L82—85    | UC-07 步3
+'   12 | 乘降量 += n，按 in/out 分别累加              | aggregate_window | metrics L90—95    | UC-06 步5
+'   13 | 按乘降量降序生成站点明细，连同 total 与两个计数一起返回 | aggregate_window | metrics L97—115 | UC-06 步6
+'   14 | 组快照并写 metric:snapshot（TTL 5 秒）       | build_snapshot   | consumer L92—99、221—222 | UC-08 步1、2
+'   15 | 按站点批量写 metric_window（唯一键冲突忽略）  | persist_window   | consumer L102—152 | UC-08 步3、4
+'   16 | 确认本批消息（XACK）                        | run_window       | consumer L225—226 | UC-05 步5
+'   17 | 休眠 1 秒减本轮耗时                         | run_window       | consumer L237—239 | —
+'
+' 编号 11 为什么把两种非法合并成一个守卫
+'   「字段缺/类型错」（L70—72）与「方向不是 in/out」（L74—79）的后继动作完全相同：
+'   都只加 invalid_count 再 continue。拆成两层判定，判定树会多出一列、守卫标签互相挤，
+'   读图反而更慢；两种原因在源码里仍是两条独立分支，节点清单已分别标行号，可逐条核对。
+'
+' 守卫穷尽性
+'   循环 A（3—6）：event_time 可解析 / 不可解析；可解析再分 ≥ 窗口结束 / < 窗口结束，互补。
+'   循环 B（10—13）：三字段与方向合法 / 非法；早于迟到门槛 / 未早于，互补。
+'   两个循环用 repeat-while，出边各带守卫（[有] / [没有了]）；判定全部双出边、无悬空支路。
+'   终止路径只有一条（收到停止信号），补牛眼结束节点。
+'
+' 刻意偏离 references/03 §4-7「不画系统内部实现」
+'   03 这条针对**用例活动图**；本节（2.2.2）的题目恰恰是"关键类关键操作的程序逻辑"，
+'   活动就必须写成"函数 + 动作"。用例级的"谁做了什么"由 06 号图承担，两图不冲突。
+'
+' 未画进主线的分支（属错误处理，报告图注里说明）
+'   ① 落库失败：persist_window 内捕获异常，只记一次告警，快照照写（UC-08 异常流 E1）；
+'   ② 回放模式：跳过 split_ready 与迟到判定，按 event_time 直接分桶后逐窗
+'      aggregate_window(ignore_late=True)，只落库、不写快照（consumer L186—207）；
+'   ③ Redis 读失败：run_window 外层抛 RedisError，进程退出交运维重启（UC-05 异常流 E2）。
+' =====================================================================
+title 活动图：窗口聚合程序逻辑（run_window → split_ready → aggregate_window）
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei"
+skinparam ArrowColor #4A6B8A
+skinparam ArrowFontColor #1F2D3D
+skinparam nodesep 26
+skinparam ranksep 26
+skinparam activity {
+  BackgroundColor #F4F8FD
+  BorderColor #4A6B8A
+  DiamondBackgroundColor #EEF4FB
+  FontColor #1F2D3D
+  ConditionEndStyle hline
+}
+
+start
+repeat
+  :1 run_window 取一批事件（count=500，阻塞 500 毫秒）;
+  :2 run_window 对齐窗口起点（now 向下取整到整秒），窗口结束 = 起点 + 1 秒;
+  repeat
+    :3 split_ready 取一条事件并解析 event_time;
+    if (event_time 可解析?) then ([否])
+      :4 split_ready 原样放进 ready（交给聚合记非法）;
+    else ([是])
+      if (event_time ≥ 窗口结束?) then ([是])
+        :5 split_ready 放进 deferred（留到下一轮）;
+      else ([否])
+        :6 split_ready 放进 ready;
+      endif
+    endif
+  repeat while (本批还有事件未分类?) is ([有]) not ([没有了])
+  if (暂存队列超过 2000 条?) then ([是])
+    :7 run_window 只保留最近 2000 条，丢弃更早的;
+  else ([否])
+  endif
+  :8 aggregate_window 计算迟到门槛 = 窗口起点 − 2 个窗口;
+  repeat
+    :9 aggregate_window 取一条事件，解析 event_time、passengers、station_id;
+    if (三字段可解析且方向为 in/out?) then ([否])
+      :10 aggregate_window 非法数 + 1，跳过该条;
+    else ([是])
+      if (event_time 早于迟到门槛?) then ([是])
+        :11 aggregate_window 迟到数 + 1，按站点记一条;
+      else ([否])
+        :12 aggregate_window 乘降量 += n，按 in/out 分别累加;
+      endif
+    endif
+  repeat while (ready 还有事件未处理?) is ([有]) not ([没有了])
+  :13 aggregate_window 按乘降量降序生成站点明细，连同 total 与两个计数一起返回;
+  :14 run_window 组快照并写 metric:snapshot（TTL 5 秒）;
+  :15 run_window 按站点批量写 metric_window（唯一键冲突忽略）;
+  :16 run_window 确认本批消息（XACK）;
+  :17 run_window 休眠 1 秒减本轮耗时;
+repeat while (未收到停止信号?) is ([是]) not ([否])
+stop
+@enduml

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-11 查询历史序列 · 鲁棒图（数据服务模块 api/）
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-11 主事件流 1—4；04-用例图-数据服务.svg 参与者
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    值班主管 @(100,250)
+    actor    op2   大屏页面 @(100,470)
+    boundary cli   :HTTP 接口 @(360,360)
+    control  svc   :序列查询服务 @(700,360)
+    entity   win   :客流窗口 @(1010,170)
+    entity   st    :车站 @(1010,430)
+    external db    :指标库 MySQL @(1010,660)
+  边清单
+    值班主管 → :HTTP 接口  1：GET /api/series
+    大屏页面 → :HTTP 接口  1.0：“查看趋势折线”
+    :HTTP 接口 → :序列查询服务  1.1：解析 minutes / station_id（扇形展开 -6°）
+    :序列查询服务 → :HTTP 接口  2.1：400 INVALID_PARAM（扇形展开 6°）
+    :序列查询服务 → :客流窗口  3.1：按时间范围过滤
+    :序列查询服务 → :车站  3.2：按站点过滤
+    :序列查询服务 → :指标库 MySQL  4.1：按时间聚合升序
+  覆盖：主事件流 1—4 全部活动；可选事件流 A1（不传站点即全站汇总）含在 3.2；E1（参数非法）为 2.1
+  假设：:客流窗口 与 :车站 均取自 14-域模型，分别承载时间维度与站点维度
+  假设：两条过滤条件对同一查询生效，按 3.1 / 3.2 分开编号，便于与用例表逐步对照
+-->
+<rect x="0" y="0" width="1200" height="800" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-11 查询历史序列 · 鲁棒图（数据服务模块 api/）</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">站点过滤条件落在 :车站 上，时间范围过滤落在 :客流窗口 上，各管一段</text>
+<circle cx="100" cy="210" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="221" x2="100" y2="256" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="231" x2="115" y2="231" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="256" x2="88" y2="277" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="256" x2="112" y2="277" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="302" text-anchor="middle" font-size="13" fill="#2b2b2b">值班主管</text>
+<circle cx="100" cy="430" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="441" x2="100" y2="476" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="451" x2="115" y2="451" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="476" x2="88" y2="497" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="476" x2="112" y2="497" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="522" text-anchor="middle" font-size="13" fill="#2b2b2b">大屏页面</text>
+<circle cx="360" cy="360" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="340" x2="310" y2="380" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="360" x2="326" y2="360" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="416" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:HTTP 接口</text>
+<circle cx="700" cy="360" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,334.2 A45,45 0 0 1 736.9,334.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,334.2 L726.9,327.8 L734.2,322.6 Z" fill="#2b2b2b"/>
+<text x="700" y="430" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:序列查询服务</text>
+<circle cx="1010" cy="170" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="976" y1="211" x2="1044" y2="211" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="231" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:客流窗口</text>
+<circle cx="1010" cy="430" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="976" y1="471" x2="1044" y2="471" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="491" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:车站</text>
+<rect x="910.0" y="623.0" width="200" height="74" rx="8" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="1010" y="652" text-anchor="middle" font-size="12" fill="#5a6472">«外部系统»</text>
+<text x="1010" y="678" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:指标库 MySQL</text>
+<line x1="131.3" y1="263.2" x2="310.0" y2="338.8" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,338.8 L298.1,338.7 L301.6,330.4 Z" fill="#2b2b2b"/>
+<line x1="131.3" y1="456.8" x2="310.0" y2="381.2" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,381.2 L301.6,389.6 L298.1,381.3 Z" fill="#2b2b2b"/>
+<line x1="393.8" y1="363.6" x2="666.2" y2="356.4" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.2,356.4 L655.3,361.2 L655.1,352.2 Z" fill="#2b2b2b"/>
+<line x1="666.2" y1="356.4" x2="393.8" y2="363.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M393.8,363.6 L404.7,358.8 L404.9,367.8 Z" fill="#2b2b2b"/>
+<line x1="729.0" y1="342.2" x2="981.0" y2="187.8" stroke="#2b2b2b" stroke-width="1.8"/><path d="M981.0,187.8 L974.0,197.4 L969.3,189.7 Z" fill="#2b2b2b"/>
+<line x1="733.2" y1="367.5" x2="976.8" y2="422.5" stroke="#2b2b2b" stroke-width="1.8"/><path d="M976.8,422.5 L965.1,424.5 L967.1,415.7 Z" fill="#2b2b2b"/>
+<line x1="724.4" y1="383.6" x2="971.8" y2="623.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M971.8,623.0 L960.7,618.6 L967.0,612.1 Z" fill="#2b2b2b"/>
+<g><rect x="151.9" y="288.0" width="137.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="220.7" y="305.4" text-anchor="middle" font-size="12" fill="#2b2b2b">1：GET /api/series</text>
+<g><rect x="146.8" y="406.0" width="147.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="220.7" y="423.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1.0：“查看趋势折线”</text>
+<g><rect x="409.2" y="329.4" width="214.4" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="516.4" y="346.7" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：解析 minutes / station_id</text>
+<g><rect x="491.6" y="363.9" width="164.0" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="573.6" y="381.2" text-anchor="middle" font-size="12" fill="#2b2b2b">2.1：400 INVALID_PARAM</text>
+<g><rect x="787.1" y="252.0" width="135.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="855.0" y="269.3" text-anchor="middle" font-size="12" fill="#2b2b2b">3.1：按时间范围过滤</text>
+<g><rect x="789.4" y="379.8" width="111.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="845.3" y="397.1" text-anchor="middle" font-size="12" fill="#2b2b2b">3.2：按站点过滤</text>
+<g><rect x="780.2" y="490.3" width="135.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="848.1" y="507.6" text-anchor="middle" font-size="12" fill="#2b2b2b">4.1：按时间聚合升序</text>
+<text x="40" y="744" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="770" font-size="12.5" fill="#5a6472">可选事件流 A2：时间范围内无数据时返回空 points 与 200；E1：参数越界返回 400 INVALID_PARAM 并带上收到的值。</text>
+</svg>

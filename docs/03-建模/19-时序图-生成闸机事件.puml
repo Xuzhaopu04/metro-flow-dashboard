@@ -1,0 +1,71 @@
+@startuml 19-时序图-生成闸机事件
+' =====================================================================
+' 产物：UC-01 生成闸机事件 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：图/15-鲁棒图-生成闸机事件.png（对象名逐字沿用）、docs/01-需求/用例表.md UC-01 基本流 1—6
+' 覆盖：基本流 1—6 全部活动；备选流 A1（count 达量退出）写成 loop 守卫；
+'       异常流 E1（连不上 Redis）属前置条件的一次性校验，未展开，见 note
+' 假设：A1 补 :闸机事件 实体 —— 鲁棒图 15 缺该实体，而用例表第 4 步"组装成契约 2.1 的事件"
+'       必须由实体承载，故此处按域模型补 :闸机事件，鲁棒图需同步补齐
+'       A2 消息编号改用 UC-01 自身步号；鲁棒图 15 的 6.1「打印日志」实属第 5 步，本图记为 5.2
+' =====================================================================
+title UC-01 生成闸机事件：一次启动到逐条写入
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam noteBackgroundColor #FFFFFF
+skinparam noteBorderColor #2b2b2b
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "系统维护者" as OP
+boundary ":命令行界面" as CLI
+control ":事件生成服务" as SVC
+collections ":车站" as ST
+entity ":闸机事件" as EV
+participant ":Redis Stream" as RS <<外部系统>>
+
+note over CLI, SVC
+  前置条件：事件队列可用。
+  异常流 E1（连不上 Redis）
+  提示后直接退出，不重试。
+end note
+
+OP -> CLI : 1：“启动模拟器”
+activate CLI
+CLI -> SVC : 1.1：解析参数
+activate SVC
+
+loop 未达指定条数（达量即退出）
+  SVC -> SVC : 2.1：取当前时刻、判断所处时段
+  SVC -> ST : 3.1：按权重选站
+  activate ST
+  ST --> SVC : 站点与进/出站倾向
+  deactivate ST
+  SVC -> SVC : 4.1：生成 1—5 人乘客数
+  SVC -> EV : 4.2：«create»
+  activate EV
+  SVC -> RS : 5.1：XADD 写入 gate_events
+  activate RS
+  RS --> SVC : 消息编号
+  deactivate RS
+  deactivate EV
+  SVC -> CLI : 5.2：打印一条日志
+  SVC -> SVC : 6.1：按速率等待
+end
+
+deactivate SVC
+deactivate CLI
+CLI --> OP
+@enduml

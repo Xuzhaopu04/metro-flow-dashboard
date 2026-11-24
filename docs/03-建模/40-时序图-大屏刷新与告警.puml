@@ -1,0 +1,76 @@
+@startuml 40-时序图-大屏刷新与告警
+' =====================================================================
+' 产物：UC-14 查看实时客流 + UC-17 接收客流告警 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：32-鲁棒图-查看实时客流.svg、35-鲁棒图-接收客流告警.svg（对象名逐字沿用）；用例表 UC-14 / UC-17
+' 覆盖：UC-14 基本流 1—3；UC-17 基本流 1—3（以 opt 片段挂在同一个每秒轮询里）
+' 假设：A1 UC-17 是 UC-14 的扩展，扩展点为「总客流超阈值」，故嵌在 2.1 之后
+'       A2 阈值是前端常量、不是域对象，故本图不含对应实体（与 35 号鲁棒图一致）
+'       A3 请求失败的那条支路只留一句转交，具体交互见 41 号图（UC-18）
+' =====================================================================
+title UC-14 查看实时客流（含 UC-17 告警判定）
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "值班员" as OP
+boundary ":大屏页面" as UI
+control ":看板控制器" as CTL
+control ":告警判定" as ALM
+entity ":实时快照" as SS
+participant ":数据服务模块" as API <<外部系统>>
+
+OP -> UI : 1：“查看实时客流”
+activate UI
+UI -> CTL : 1.1：启动每秒轮询
+activate CTL
+
+loop 每秒一次
+  CTL -> API : 1.2：GET /api/snapshot
+  activate API
+  alt 请求成功
+    API --> CTL : 200 + 快照 JSON
+    deactivate API
+    CTL -> SS : 2.1：更新顶部总客流
+    activate SS
+    CTL -> SS : 3.1：柱状图降序重绘
+    CTL -> ALM : UC-17/1.1：比较总客流与阈值
+    activate ALM
+    opt 总客流超过阈值
+      ALM -> SS : UC-17/1.2：读总客流
+      ALM -> UI : UC-17/2.1：显示红色横幅
+    end
+    note right of ALM
+      回落到阈值以下时
+      自动隐藏横幅
+      （UC-17/3.1）
+    end note
+    deactivate ALM
+    deactivate SS
+  else 超时或非 2xx
+    API --> CTL : 超时 / 5xx
+    deactivate API
+    note over CTL
+      转入 UC-18，
+      断线与恢复见 41 号图
+    end note
+  end
+end
+
+deactivate CTL
+deactivate UI
+UI --> OP
+@enduml

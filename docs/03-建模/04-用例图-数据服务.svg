@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="780" viewBox="0 0 1700 780" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：数据服务模块 用例图（坐标化 SVG）
+  规范：se-requirements-modeling references/01（符号与关系）、references/06 §1–§2（阈值与分区）
+  对应：docs/01-需求/用例表.md  UC-10～UC-13
+  版本：v2（2026-11-23 按规范重绘）；v1 为同目录 PlantUML 版，已废弃
+  规模：5 参与者 / 4 用例，参与者超过自动布局阈值（≥4），故用坐标化 SVG
+  布局分区：左 x=200 人类参与者（值班员在上、值班主管在下）；
+            框内列 x=620 按业务顺序自上而下：UC-13 → UC-10 → UC-11 → UC-12；
+            右 x=1560 外部系统/存储：快照缓存(140) 可视化展示模块(280) 指标库(470)
+  节点清单
+    参与者  值班员(L,140)  值班主管(L,480)
+            快照缓存«actor»(R,140)  可视化展示模块«actor»(R,280)  指标库«actor»(R,470)
+    用例    UC-13(620,140)  UC-10(620,280)  UC-11(620,420)  UC-12(620,560)
+  边清单
+    关联（无箭头实线）  值班员—UC-13；值班主管—UC-11、UC-12；
+                        快照缓存—UC-10；可视化展示模块—UC-10、UC-11、UC-12；
+                        指标库—UC-11、UC-12
+    依赖（虚线+开放箭头） UC-13 =«include»=> UC-10（垂直，主用例在上）
+  接口：UC-10 GET /api/snapshot；UC-11 GET /api/series；UC-12 GET /api/rank
+-->
+<defs>
+  <marker id="openArrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+    <path d="M1,1 L11,6 L1,11" fill="none" stroke="#4A6B8A" stroke-width="1.4"/>
+  </marker>
+</defs>
+<style>
+  .halo { paint-order: stroke; stroke: #FFFFFF; stroke-width: 4px; stroke-linejoin: round; }
+  text { user-select: none; }
+</style>
+<rect x="0" y="0" width="1700" height="780" fill="#FFFFFF"/>
+<rect x="320" y="80" width="1010" height="570" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="825.0" y="110" text-anchor="middle" font-size="18" font-weight="700" fill="#2E5C8A">数据服务模块（api/）</text>
+<circle cx="200" cy="110" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="123" x2="200" y2="146" stroke="#4A6B8A" stroke-width="1.6"/><line x1="183" y1="132" x2="217" y2="132" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="146" x2="187" y2="164" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="146" x2="213" y2="164" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="200" y="186" text-anchor="middle" font-size="13" fill="#1F2D3D">值班员</text>
+<circle cx="200" cy="450" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="463" x2="200" y2="486" stroke="#4A6B8A" stroke-width="1.6"/><line x1="183" y1="472" x2="217" y2="472" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="486" x2="187" y2="504" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="486" x2="213" y2="504" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="200" y="526" text-anchor="middle" font-size="13" fill="#1F2D3D">值班主管</text>
+<circle cx="1560" cy="110" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="123" x2="1560" y2="146" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1543" y1="132" x2="1577" y2="132" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="146" x2="1547" y2="164" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="146" x2="1573" y2="164" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="1560" y="186" text-anchor="middle" font-size="13" fill="#1F2D3D">快照缓存</text><text x="1560" y="203" text-anchor="middle" font-size="12" font-style="italic" fill="#5A6472">«actor» Redis</text>
+<circle cx="1560" cy="250" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="263" x2="1560" y2="286" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1543" y1="272" x2="1577" y2="272" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="286" x2="1547" y2="304" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="286" x2="1573" y2="304" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="1560" y="326" text-anchor="middle" font-size="13" fill="#1F2D3D">可视化展示模块</text><text x="1560" y="343" text-anchor="middle" font-size="12" font-style="italic" fill="#5A6472">«actor» 大屏页面</text>
+<circle cx="1560" cy="440" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="453" x2="1560" y2="476" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1543" y1="462" x2="1577" y2="462" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="476" x2="1547" y2="494" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1560" y1="476" x2="1573" y2="494" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="1560" y="516" text-anchor="middle" font-size="13" fill="#1F2D3D">指标库</text><text x="1560" y="533" text-anchor="middle" font-size="12" font-style="italic" fill="#5A6472">«actor» MySQL</text>
+<ellipse cx="620" cy="140" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="620" y="145" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-13: 渲染大屏页面</text>
+<ellipse cx="620" cy="280" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="620" y="285" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-10: 获取实时快照</text>
+<ellipse cx="620" cy="420" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="620" y="425" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-11: 查询历史序列</text>
+<ellipse cx="620" cy="560" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="620" y="565" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-12: 查询站点排行</text>
+<line x1="216" y1="140" x2="490" y2="140" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="216" y1="152" x2="490" y2="292" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="216" y1="472" x2="490" y2="426" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="216" y1="482" x2="490" y2="556" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1542" y1="140" x2="750" y2="272" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1542" y1="280" x2="750" y2="290" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1542" y1="288" x2="750" y2="426" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1542" y1="296" x2="750" y2="566" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1542" y1="462" x2="750" y2="414" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1542" y1="478" x2="750" y2="554" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="620" y1="174" x2="620" y2="244" stroke="#4A6B8A" stroke-width="1.3" stroke-dasharray="7,5" marker-end="url(#openArrow)"/>
+<text x="634" y="214" text-anchor="start" font-size="12" fill="#2E5C8A" class="halo">«include»</text>
+<text x="40" y="700" font-size="12.5" fill="#5A6472" class="halo">图注：UC-10 是 UC-13 的必要步骤，故由 UC-13 包含；被包含的 UC-10 仍关联快照缓存与大屏页面（它是接口本身）。所有关联为无箭头实线，接口路径见 puml 头注释。</text>
+</svg>

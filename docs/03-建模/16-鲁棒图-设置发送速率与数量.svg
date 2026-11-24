@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：UC-02 设置发送速率与数量 · 鲁棒图
+  规范：se-robustness-diagram §4–§8；references/03（三元素几何、平行线、标签避让）
+  对应：docs/01-需求/用例表.md UC-02 基本流 1—3；02-用例图-数据采集.svg（extend UC-01）
+  版本：v1（2026-11-23 按 skill 重绘；v0 只有 PNG，缺源文件、结构清单与覆盖声明）
+  节点清单
+    actor    op    系统维护者 @(100,300)
+    boundary cli   :命令行界面 @(360,300)
+    control  svc   :事件生成服务 @(700,300)
+  边清单
+    系统维护者 → :命令行界面  1：“设置速率与数量”
+    :命令行界面 → :事件生成服务  1.1：解析并校验参数（扇形展开 -6°）
+    :事件生成服务 → :命令行界面  1.3：发送节奏就绪（扇形展开 6°）
+  覆盖：基本流 1—3 全部活动；异常流 E1（速率非正数按 0.01 兜底）含在 1.2
+  假设：不设实体：速率与条数不落库，域模型中也没有对应类
+  假设：本用例是 UC-01 的扩展，插入点在 UC-01 的 1.1 之后（扩展点「指定速率与条数」）
+  假设：1.2 换算间隔是控制内部计算，不产生组件间消息
+-->
+<rect x="0" y="0" width="1200" height="520" fill="#ffffff"/>
+<text x="40" y="46" font-size="19" font-weight="700" fill="#1f2d3d">UC-02 设置发送速率与数量 · 鲁棒图</text>
+<text x="40" y="72" font-size="12.5" fill="#5a6472">速率与条数只在进程内生效、不持久化，按「不编造实体」原则不设实体</text>
+<circle cx="100" cy="260" r="11" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="271" x2="100" y2="306" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="85" y1="281" x2="115" y2="281" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="88" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="100" y1="306" x2="112" y2="327" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="100" y="352" text-anchor="middle" font-size="13" fill="#2b2b2b">系统维护者</text>
+<circle cx="360" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="280" x2="310" y2="320" stroke="#2b2b2b" stroke-width="1.8"/>
+<line x1="310" y1="300" x2="326" y2="300" stroke="#2b2b2b" stroke-width="1.8"/>
+<text x="360" y="356" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:命令行界面</text>
+<circle cx="700" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M663.1,274.2 A45,45 0 0 1 736.9,274.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M736.9,274.2 L726.9,267.8 L734.2,262.6 Z" fill="#2b2b2b"/>
+<text x="700" y="370" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:事件生成服务</text>
+<line x1="134.0" y1="300.0" x2="310.0" y2="300.0" stroke="#2b2b2b" stroke-width="1.8"/><path d="M310.0,300.0 L299.0,304.5 L299.0,295.5 Z" fill="#2b2b2b"/>
+<line x1="393.8" y1="303.6" x2="666.2" y2="296.4" stroke="#2b2b2b" stroke-width="1.8"/><path d="M666.2,296.4 L655.3,301.2 L655.1,292.2 Z" fill="#2b2b2b"/>
+<line x1="666.2" y1="296.4" x2="393.8" y2="303.6" stroke="#2b2b2b" stroke-width="1.8"/><path d="M393.8,303.6 L404.7,298.8 L404.9,307.8 Z" fill="#2b2b2b"/>
+<g><rect x="148.7" y="287.0" width="146.6" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="222.0" y="304.3" text-anchor="middle" font-size="12" fill="#2b2b2b">1：“设置速率与数量”</text>
+<g><rect x="448.5" y="269.4" width="135.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="516.4" y="286.7" text-anchor="middle" font-size="12" fill="#2b2b2b">1.1：解析并校验参数</text>
+<g><rect x="522.6" y="303.6" width="123.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
+<text x="584.5" y="320.9" text-anchor="middle" font-size="12" fill="#2b2b2b">1.3：发送节奏就绪</text>
+<text x="40" y="464" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="490" font-size="12.5" fill="#5a6472">参数为 speed（倍速）与 count（条数），消息名里省去以保持标签可读。换算规则：间隔 = 1 / speed；speed 非正数按 0.01 兜底；count 为 0 表示不限条数。</text>
+</svg>

@@ -4,8 +4,8 @@
 理由：站点表是人工维护的小文件，改动频率低但演示前可能临时调；一旦缓存住，
 改完要重启才生效，联调时最难判断"到底是没改还是没生效"。
 
-容错姿态是"缺就返回 null，不编造"：采集端这份表目前只有 line_id 和 weight，
-名称、顺序、坐标都还没有。等采集补齐就自动出现，服务端不用跟着改。
+容错姿态是"缺就返回 null，不编造"：采集表里没给的字段一律返回 null，
+不拿站名或默认色顶上。采集补齐后自动出现，服务端不用跟着改。
 """
 
 import json
@@ -22,8 +22,8 @@ def stations_file():
     return os.path.join(settings.BASE_DIR, "simulator", "stations.json")
 
 
-def load_stations():
-    """读站点表，返回 {station_id: {...}}。读不到、格式坏，一律返回空字典。
+def _read_payload():
+    """读站点表原始 JSON，返回顶层对象。读不到、格式坏，一律返回空字典。
 
     这层不抛异常：站点表只是辅助信息，缺了页面顶多少几个名字，
     不该让整个接口 500。降级要留日志，否则排障时看不出是"本来没有"还是"读失败"。
@@ -42,6 +42,26 @@ def load_stations():
         logger.warning("站点表格式不是对象，忽略：%s", path)
         return {}
     return payload
+
+
+def load_stations():
+    """返回 {station_id: {...}}。
+
+    采集端的 stations.json 顶层是 {lines, stations}；只认 stations 这一层，
+    否则顶层键会被当成站点，线路映射随之变空。旧版单层表也兼容。
+    """
+    payload = _read_payload()
+    nested = payload.get("stations")
+    return nested if isinstance(nested, dict) else payload
+
+
+def load_line_meta():
+    """返回 {line_id: {name, color, order}}，来自顶层 lines；没有就给空字典。
+
+    线路名和颜色只有采集表知道，不能拿站名或默认色冒充。
+    """
+    nested = _read_payload().get("lines")
+    return nested if isinstance(nested, dict) else {}
 
 
 def station_entry(station_id, raw):
@@ -77,16 +97,18 @@ def build_lines(stations):
             continue
         grouped.setdefault(line_id, []).append(station)
 
+    meta = load_line_meta()
     lines = []
     for line_id in sorted(grouped):
         members = sorted(grouped[line_id], key=lambda s: (s["order"] is None, s["order"] or 0,
                                                           s["station_id"]))
+        info = meta.get(line_id) if isinstance(meta.get(line_id), dict) else {}
         lines.append({
             "line_id": line_id,
-            # 线路名只认采集表里显式的 line_name。原先取首个站点的 name 当线路名，
-            # 会把"人民广场"标成 1 号线的名字——这是编造，契约 4.5 明确禁止。
-            "name": line_name_of(grouped[line_id]),
-            "color": next((m["color"] for m in members if m["color"]), None),
+            # 线路名优先用顶层 lines 的显式名称；站点上带 line_name 时才退回它。
+            # 取首个站点的 name 会把"人民广场"标成线路名——这是编造，契约 4.5 禁止。
+            "name": info.get("name") or line_name_of(grouped[line_id]),
+            "color": info.get("color") or next((m["color"] for m in members if m["color"]), None),
             "station_ids": [m["station_id"] for m in members],
         })
     return lines

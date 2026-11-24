@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="940" viewBox="0 0 1700 940" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif">
+<!--
+  产物：可视化展示模块 用例图（坐标化 SVG）
+  规范：se-requirements-modeling references/01 §2–§5、§5.2 判定表；references/06 §1–§2（阈值与分区）、§3（标注语言）
+  对应：docs/01-需求/用例表.md  UC-14～UC-18
+  版本：v3（2026-11-23 按 06 §2 坐标化重绘）；v2 为 PlantUML 版（skinparam actorStyle awesome 已弃用），
+        v1 原图把告警、断线误判成 include，均已废弃
+  规模：3 参与者 / 5 用例，未超阈值（06 §1）；按 06 §1.1「多关系同挂一个主用例」「需与另一张图
+        对齐符号」两条信号改用坐标化 SVG，与 03、04 同一套符号
+  布局分区：左 x=200 值班员与值班主管；框内单列 x=700 按业务顺序自上而下；右 x=1420 外部系统；
+            椭圆 rx=130 ry=34，纵向间距 155
+  节点清单
+    参与者  值班员(L,397)  值班主管(L,785)  数据服务模块（接口）«actor»(R,630)
+    用例    UC-18(700,165)  UC-15(700,320)  UC-14(700,475)  UC-17(700,630)  UC-16(700,785)
+  边清单
+    关联（无箭头实线）  值班员—UC-14、UC-15、UC-17、UC-18；值班主管—UC-16；数据服务模块—UC-14、UC-16
+    依赖（虚线+开放箭头） UC-15 =«extend»=> UC-14（扩展点：按线路筛站，垂直向上）
+                        UC-17 =«extend»=> UC-14（扩展点：总客流超阈值，垂直向上）
+                        UC-18 =«extend»=> UC-14（扩展点：请求断线；正交绕行：出 UC-18 右端→x=940 下行→入 UC-14 右端）
+  说明：1. 三个扩展同挂 UC-14，单列只能容纳 UC-15、UC-17 上下相邻，故 UC-18 的正交绕行走列右侧空带
+           （x=940），避免虚线穿过 UC-15 的椭圆（06 §5 目检项"关联线未穿过椭圆"）。
+        2. UC-15、UC-17 占据 UC-14 上下两个相邻槽位，垂直虚线箭头指向主用例，标签放线右侧
+           （06 §2 规则 6）；UC-18 超出相邻槽位，按同一规则走正交绕行。
+        3. 本图不涉及 include，无 A10 豁免项。
+        4. 数据服务模块→UC-14 的关联改落在椭圆右下弧（806,494），不落在右顶点：
+           UC-18 的绕行虚线已占用右顶点，两条线汇于一点会糊成叉，看不清箭头。
+-->
+<defs>
+  <marker id="openArrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+    <path d="M1,1 L11,6 L1,11" fill="none" stroke="#4A6B8A" stroke-width="1.4"/>
+  </marker>
+</defs>
+<style>
+  .halo { paint-order: stroke; stroke: #FFFFFF; stroke-width: 4px; stroke-linejoin: round; }
+  text { user-select: none; }
+</style>
+<rect x="0" y="0" width="1700" height="940" fill="#FFFFFF"/>
+<rect x="430" y="70" width="680" height="780" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="830" y="106" text-anchor="middle" font-size="18" font-weight="700" fill="#2E5C8A">可视化展示模块（web/）</text>
+<circle cx="200" cy="397" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="410" x2="200" y2="433" stroke="#4A6B8A" stroke-width="1.6"/><line x1="183" y1="419" x2="217" y2="419" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="433" x2="187" y2="451" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="433" x2="213" y2="451" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="200" y="473" text-anchor="middle" font-size="13" fill="#1F2D3D">值班员</text>
+<circle cx="200" cy="785" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="798" x2="200" y2="821" stroke="#4A6B8A" stroke-width="1.6"/><line x1="183" y1="807" x2="217" y2="807" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="821" x2="187" y2="839" stroke="#4A6B8A" stroke-width="1.6"/><line x1="200" y1="821" x2="213" y2="839" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="200" y="861" text-anchor="middle" font-size="13" fill="#1F2D3D">值班主管</text>
+<circle cx="1420" cy="630" r="13" fill="#FFFFFF" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1420" y1="643" x2="1420" y2="666" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1403" y1="652" x2="1437" y2="652" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1420" y1="666" x2="1407" y2="684" stroke="#4A6B8A" stroke-width="1.6"/><line x1="1420" y1="666" x2="1433" y2="684" stroke="#4A6B8A" stroke-width="1.6"/>
+<text x="1420" y="706" text-anchor="middle" font-size="13" fill="#1F2D3D">数据服务模块（接口）</text><text x="1420" y="723" text-anchor="middle" font-size="12" font-style="italic" fill="#5A6472">«actor» 下游</text>
+<ellipse cx="700" cy="165" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="700" y="170" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-18: 感知断线与恢复</text>
+<ellipse cx="700" cy="320" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="700" y="325" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-15: 按线路筛选</text>
+<ellipse cx="700" cy="475" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="700" y="480" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-14: 查看实时客流</text>
+<ellipse cx="700" cy="630" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="700" y="635" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-17: 接收客流告警</text>
+<ellipse cx="700" cy="785" rx="130" ry="34" fill="#F4F8FD" stroke="#4A6B8A" stroke-width="1.4"/>
+<text x="700" y="790" text-anchor="middle" font-size="14" fill="#1F2D3D">UC-16: 查看趋势与排行</text>
+<line x1="217" y1="419" x2="570" y2="165" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="217" y1="419" x2="570" y2="320" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="217" y1="419" x2="570" y2="475" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="217" y1="419" x2="570" y2="630" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="217" y1="807" x2="570" y2="785" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1403" y1="652" x2="806" y2="494" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="1403" y1="652" x2="830" y2="785" stroke="#4A6B8A" stroke-width="1.3"/>
+<line x1="700" y1="354" x2="700" y2="439" stroke="#4A6B8A" stroke-width="1.3" stroke-dasharray="7,5" marker-end="url(#openArrow)"/>
+<text x="716" y="384" text-anchor="start" font-size="12" fill="#2E5C8A" class="halo">«extend»</text>
+<text x="716" y="402" text-anchor="start" font-size="12" fill="#5A6472" class="halo">扩展点：按线路筛站</text>
+<line x1="700" y1="596" x2="700" y2="511" stroke="#4A6B8A" stroke-width="1.3" stroke-dasharray="7,5" marker-end="url(#openArrow)"/>
+<text x="716" y="536" text-anchor="start" font-size="12" fill="#2E5C8A" class="halo">«extend»</text>
+<text x="716" y="554" text-anchor="start" font-size="12" fill="#5A6472" class="halo">扩展点：总客流超阈值</text>
+<polyline points="830,165 940,165 940,475 834,475" fill="none" stroke="#4A6B8A" stroke-width="1.3" stroke-dasharray="7,5" marker-end="url(#openArrow)"/>
+<text x="956" y="300" text-anchor="start" font-size="12" fill="#2E5C8A" class="halo">«extend»</text>
+<text x="956" y="318" text-anchor="start" font-size="12" fill="#5A6472" class="halo">扩展点：请求断线</text>
+<text x="40" y="900" font-size="12.5" fill="#5A6472" class="halo">图注：所有关联为无箭头实线，只表示参与关系，不表示数据流向；UC-14 调 GET /api/snapshot，UC-16 调 GET /api/series、/api/rank（接口见《接口契约》2.2）。</text>
+<text x="40" y="920" font-size="12.5" fill="#5A6472" class="halo">UC-15、UC-17、UC-18 都是条件满足才发生、不做也能看完实时客流，故按 01 §5.2 判定表记为 «extend»，箭头由扩展用例指向 UC-14；「数据服务模块」在系统之外，标 «actor»。</text>
+</svg>

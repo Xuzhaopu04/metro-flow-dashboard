@@ -46,3 +46,11 @@
 - 一次提交只做一件事，信息用 `类型(范围): 说明`，例如 `feat(stream): 窗口聚合支持跨窗口事件`
 - 类型：`feat` / `fix` / `docs` / `test` / `chore` / `refactor`
 - 提交前跑 `pytest` 和 `python manage.py check`
+- 克隆后执行一次 `git config core.hooksPath .githooks`，装上提交前钩子
+- 提交被钩子拒了，是文件超过 5000 token，照报错把文件拆小再提交，不要绕过钩子
+- 写新函数、新规则前，先搜项目里有没有现成的，别造第二份
+
+## 找东西
+
+- 需求、设计、口径、测试用例都在 `docs/` 下分册，按编号找，不要全文通读
+- 代码只有一处实现：`simulator/` 造数、`stream/` 算指标、`api/` 出接口、`web/` 展示

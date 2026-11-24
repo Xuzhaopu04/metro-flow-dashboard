@@ -59,7 +59,10 @@ TIME_ZONE = "Asia/Shanghai"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+# 页面样式与脚本按功能拆在 web/assets/ 下，用 {% static %} 引；
+# 前面带 / 是为了页面从任何带 hash 的地址打开都能取到（相对路径会跟着请求路径跑偏）。
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "web"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---- 业务参数（采集端、计算端、接口端共用同一批环境变量名）----
