@@ -1,0 +1,86 @@
+@startuml 38-时序图-窗口聚合与落库
+' =====================================================================
+' 产物：UC-06 窗口聚合出指标 + UC-08 写快照与写入数据库 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：24-鲁棒图-窗口聚合.svg、26-鲁棒图-写快照与写库.svg（对象名逐字沿用）；用例表 UC-06 / UC-08
+' 覆盖：UC-06 基本流 1—6；UC-08 基本流 1—4
+' 假设：A1 UC-06 的产出直接交给 UC-08：两段用 == 分节，跨节处是一次控制到控制的调用
+'       A2 UC-06 备选流 A1（无有效事件仍产出全 0 指标）与 UC-08 异常流 E1（库不可用只告警一次）用 alt 表达
+'       A3 2.1 对齐整秒、4.1 暂存后续窗口事件为控制内部计算，不画消息，只在图注说明
+' =====================================================================
+title UC-06 窗口聚合出指标 → UC-08 写快照与写入数据库
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequenceDividerBackgroundColor #EEF3F8
+skinparam sequenceDividerBorderColor #B8C6D6
+skinparam sequenceDividerFontColor #2E5C8A
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "计算进程" as P
+control ":窗口聚合服务" as AGG
+collections ":闸机事件" as EV
+collections ":车站" as ST
+entity ":客流窗口" as WIN
+control ":快照写入服务" as SNAP
+entity ":实时快照" as SS
+participant ":数据服务模块" as DS <<外部系统>>
+participant ":指标库 MySQL" as DB <<外部系统>>
+
+== UC-06 窗口聚合出指标 ==
+P -> AGG : 1：“触发一轮聚合”
+activate AGG
+AGG -> EV : 3.1：按窗口分拣
+activate EV
+EV --> AGG : 本窗口事件 / 后续窗口事件
+deactivate EV
+AGG -> ST : 5.1：按站点累加
+activate ST
+ST --> AGG : 站点客流合计
+deactivate ST
+alt 本窗口无有效事件
+  AGG -> WIN : 6.1：«create» 全 0 指标
+else 有有效事件
+  AGG -> WIN : 6.1：«create» 指标对象
+end
+activate WIN
+
+== UC-08 写快照与写入数据库 ==
+AGG -> SNAP : 7：转交本轮指标
+activate SNAP
+SNAP -> SS : 1.2：«create» 组装快照
+activate SS
+SS --> SNAP : 快照对象
+deactivate SS
+SNAP -> DS : 2.1：写 metric:snapshot（TTL 5s）
+activate DS
+DS --> SNAP : OK
+deactivate DS
+SNAP -> WIN : 3.1：«create» 明细行
+activate WIN
+alt 数据库可用
+  SNAP -> DB : 4.1：bulk_create（唯一键幂等）
+  activate DB
+  DB --> SNAP : 影响行数
+  deactivate DB
+else 数据库不可用
+  SNAP -> SNAP : 4.2：记一次 warning
+end
+
+deactivate WIN
+deactivate SNAP
+deactivate AGG
+AGG --> P
+@enduml

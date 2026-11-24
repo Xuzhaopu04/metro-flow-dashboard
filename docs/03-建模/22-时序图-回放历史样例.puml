@@ -1,0 +1,63 @@
+@startuml 22-时序图-回放历史样例
+' =====================================================================
+' 产物：UC-04 回放历史样例 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：图/18-鲁棒图-回放历史样例.png（对象名逐字沿用）、用例表 UC-04 基本流 1—4 + 异常流 E1 / E2
+' 覆盖：基本流 1—4 全部活动；异常流 E1（样例为空）、E2（某行非合法 JSON）以 alt 表达
+' 假设：A1 补第 3 步「按事件时间差与倍速计算等待时长」—— 鲁棒图 18 无对应消息，属覆盖缺口
+'       A2 鲁棒图 18 的 5.1「打印进度」在用例表里没有第 5 步，本图改挂 4.2（逐条写入后输出进度）
+' =====================================================================
+title UC-04 回放历史样例：读取样例到逐条写入
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam noteBackgroundColor #FFFFFF
+skinparam noteBorderColor #2b2b2b
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "系统维护者" as OP
+boundary ":命令行界面" as CLI
+control ":回放服务" as SVC
+collections ":闸机事件" as EV
+participant ":Redis Stream" as RS <<外部系统>>
+
+OP -> CLI : 1：“回放样例”（replay 路径）
+activate CLI
+CLI -> SVC : 1.1：传入样例路径
+activate SVC
+
+SVC -> EV : 2.1：读取全部事件
+activate EV
+EV --> SVC : 事件列表（按事件时间升序）
+deactivate EV
+
+alt 样例为空或某行非合法 JSON
+  SVC --> CLI : E1 / E2：提示原因后结束
+  CLI --> OP : 退出码 1
+else 样例可用
+  loop 逐条事件
+    SVC -> SVC : 3.1：按事件时间差与倍速计算等待时长
+    SVC -> RS : 4.1：XADD 逐条写入 gate_events
+    activate RS
+    RS --> SVC : 消息编号
+    deactivate RS
+    SVC -> CLI : 4.2：打印进度（已回放 n / N 条）
+  end
+  SVC --> CLI : 4.3：回放完成
+  deactivate SVC
+  deactivate CLI
+  CLI --> OP
+end
+@enduml

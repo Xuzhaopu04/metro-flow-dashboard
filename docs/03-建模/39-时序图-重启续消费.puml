@@ -1,0 +1,58 @@
+@startuml 39-时序图-重启续消费
+' =====================================================================
+' 产物：UC-09 重启后续消费 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：27-鲁棒图-重启续消费.svg（对象名逐字沿用）；用例表 UC-09 基本流 1—4
+' 覆盖：基本流 1—4 全部活动；备选流 A1（重启期间新消息按正常路径消费）见图注
+' 假设：A1 参与者只画系统维护者；「计算进程（经 UC-05 参与）」不单独连线，与用例图 03 的 A10 豁免一致
+'       A2 4.2「冲突行忽略」由数据库唯一键保证，用自消息表达，表示不在应用侧去重
+' =====================================================================
+title UC-09 重启后续消费：靠消费组位置续读、靠唯一键防重
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "系统维护者" as OP
+boundary ":命令行界面" as CLI
+control ":消费调度服务" as CS
+entity ":客流窗口" as WIN
+participant ":事件队列 Redis Stream" as RS <<外部系统>>
+
+OP -> CLI : 1：“重启消费进程”
+activate CLI
+CLI -> CS : 1.1：加入同一消费组
+activate CS
+CS -> RS : 2.1：读组内确认位置
+activate RS
+RS --> CS : 上次确认的消息 ID
+deactivate RS
+
+loop 直到追上最新消息
+  CS -> RS : 3.1：XREADGROUP 只取未确认
+  activate RS
+  RS --> CS : 未确认消息（含重投）
+  deactivate RS
+  CS -> WIN : 4.1：重新聚合写入
+  activate WIN
+  WIN --> CS : 新行 / 冲突行
+  deactivate WIN
+  CS -> CS : 4.2：冲突行忽略
+end
+
+deactivate CS
+deactivate CLI
+CLI --> OP
+@enduml

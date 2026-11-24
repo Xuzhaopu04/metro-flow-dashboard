@@ -1,0 +1,84 @@
+@startuml 42-时序图-趋势排行与筛选
+' =====================================================================
+' 产物：UC-15 按线路筛选 + UC-16 查看趋势与排行 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：33/34-鲁棒图（对象名逐字沿用）；用例表 UC-15 / UC-16
+' 覆盖：UC-15 基本流 1—3；UC-16 基本流 1—3
+' 假设：A1 UC-15 是 UC-14 的扩展：先由筛选改条件，再由 UC-16 的 5 秒轮询取数，两段用 == 分节
+'       A2 筛选是本地过滤，不新增接口调用；故 UC-15 段里没有到 :数据服务模块 的消息
+'       A3 UC-16 备选流 A1（历史接口失败保留上一轮图形）用 alt 的失败分区表达
+' =====================================================================
+title UC-15 按线路筛选 → UC-16 查看趋势与排行
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequenceDividerBackgroundColor #EEF3F8
+skinparam sequenceDividerBorderColor #B8C6D6
+skinparam sequenceDividerFontColor #2E5C8A
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "值班主管" as SUP
+actor "值班员" as OP
+boundary ":大屏页面" as UI
+control ":筛选控制器" as FLT
+control ":趋势面板控制器" as TRD
+entity ":线路" as LINE
+entity ":车站" as ST
+entity ":客流窗口" as WIN
+participant ":数据服务模块" as API <<外部系统>>
+
+== UC-15 按线路筛选 ==
+OP -> UI : 1：“点击 1 号线 / 全部”
+activate UI
+UI -> FLT : 1.1：切换线路条件
+activate FLT
+FLT -> LINE : 2.1：取线路下站点
+activate LINE
+LINE --> FLT : 站点编号集合
+deactivate LINE
+FLT -> ST : 2.2：按线路过滤集合
+activate ST
+ST --> FLT : 过滤后的站点
+deactivate ST
+FLT -> UI : 3.1：传给柱状图重绘
+deactivate FLT
+
+== UC-16 查看趋势与排行 ==
+SUP -> UI : 1：“查看趋势与排行”
+UI -> TRD : 1.1：每 5 秒请求序列与排行
+activate TRD
+loop 每 5 秒一次
+  TRD -> API : 1.2：GET /api/series、/api/rank
+  activate API
+  alt 接口正常
+    API --> TRD : 200 + 序列 / 排行
+    deactivate API
+    TRD -> WIN : 2.1：渲染趋势折线
+    activate WIN
+    TRD -> ST : 2.2：渲染排行列表
+    deactivate WIN
+  else 历史接口失败
+    API --> TRD : 超时 / 5xx
+    deactivate API
+    note right of TRD
+      保留上一轮图形，
+      不打断主看板
+    end note
+  end
+end
+deactivate TRD
+deactivate UI
+UI --> SUP
+@enduml

@@ -1,42 +1,79 @@
 @startuml 11-时序图
-title 一次刷卡数据从产生到上屏
-autonumber
+' =====================================================================
+' 产物：一次刷卡数据从产生到落库 序列图（后端主链路）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：15/23/24/26-鲁棒图（对象名逐字沿用）；用例表 UC-01、UC-05、UC-06、UC-08
+' 覆盖：UC-01 的 5.1（写入）→ UC-05 的 2.1（取事件）→ UC-06（聚合）→ UC-08（落库）
+' 假设：A1 消息编号沿用各用例自身步号，用 == 分节标明属于哪个用例
+'       A2 上屏链路由 13 号图接力：本图写出的 metric:snapshot 就是 13 号图读取的那个键，两图不重叠
+'       A3 只画主路径；迟到/非法、库不可用等分支见 37、38 号图
+' =====================================================================
+title 一次刷卡数据从产生到落库（后端主链路）
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequenceDividerBackgroundColor #EEF3F8
+skinparam sequenceDividerBorderColor #B8C6D6
+skinparam sequenceDividerFontColor #2E5C8A
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
 
-participant "模拟器\nsimulator.py" as SIM
-participant "Redis Stream\ngate_events" as Q
-participant "消费者\nconsumer.py" as CON
-participant "指标计算\nmetrics.py" as MET
-participant "Redis\nmetric:snapshot" as SNAP
-participant "MySQL\nmetric_window" as DB
-participant "接口\napi/views.py" as API
-participant "浏览器\nindex.html" as WEB
+actor "系统维护者" as OP
+control ":事件生成服务" as PROD
+participant ":事件队列 gate_events" as Q <<外部系统>>
+control ":消费调度服务" as CONS
+control ":窗口聚合服务" as AGG
+control ":快照写入服务" as SNAP
+entity ":实时快照" as SS
+participant ":指标库 MySQL" as DB <<外部系统>>
 
-SIM -> Q : XADD data=GateEvent
-Q --> CON : XREADGROUP(消费组 metric_builder)
+== UC-01 生成闸机事件 ==
+OP -> PROD : 1：“启动模拟器”
+activate PROD
+PROD -> Q : 5.1：XADD 写入
+activate Q
+deactivate PROD
 
-CON -> MET : split_ready(事件, 窗口结束)
-MET --> CON : (本轮可算, 留给下一轮)
+== UC-05 消费事件 ==
+CONS -> Q : 2.1：XREADGROUP 读取
+activate CONS
+Q --> CONS : 一条消息
+deactivate Q
+CONS -> CONS : 3.1：解析为事件
 
-CON -> MET : aggregate_window(本轮事件, 窗口起点)
-MET --> CON : total / stations / late / invalid
+== UC-06 窗口聚合出指标 ==
+CONS -> AGG : 1：触发一轮聚合
+activate AGG
+AGG -> AGG : 3.1：按窗口分拣
+AGG -> AGG : 5.1：按站点累加
+deactivate CONS
 
-CON -> SNAP : SET 快照 JSON, TTL 5s
-CON -> DB : bulk_create 每站一行(幂等)
-CON -> Q : XACK 消息已处理
-
-WEB -> API : GET /api/snapshot (每秒)
-API -> SNAP : GET metric:snapshot
-alt 快照存在
-  SNAP --> API : 快照 JSON
-  API --> WEB : 200 + 数据
-else 快照过期或 Redis 不可用
-  SNAP --> API : 空
-  API --> WEB : 200 + 空结构
-  WEB -> WEB : 显示"暂无数据"
-end
-
-WEB -> API : GET /api/series、/api/rank (每 5 秒)
-API -> DB : 按时间范围聚合
-DB --> API : 序列 / 排行
-API --> WEB : 200 + 数据
+== UC-08 写快照与写入数据库 ==
+AGG -> SNAP : 7：转交本轮指标
+activate SNAP
+SNAP -> SS : 1.2：«create» 组装快照
+activate SS
+SNAP -> SS : 2.1：写 metric:snapshot（TTL 5s）
+SNAP -> DB : 4.1：bulk_create 幂等
+activate DB
+DB --> SNAP : 影响行数
+deactivate DB
+deactivate SNAP
+deactivate AGG
+deactivate SS
+note over SS
+  这里写出的 metric:snapshot
+  就是 13 号图读取的那个键
+end note
 @enduml

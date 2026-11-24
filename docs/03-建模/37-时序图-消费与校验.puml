@@ -1,0 +1,70 @@
+@startuml 37-时序图-消费与校验
+' =====================================================================
+' 产物：UC-05 消费事件 + UC-07 判定迟到与非法 序列图（时序图）
+' 规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+' 上游：23-鲁棒图-消费事件.svg、25-鲁棒图-判定迟到与非法.svg（对象名逐字沿用）；用例表 UC-05 / UC-07
+' 覆盖：UC-05 基本流 1—5；UC-07 基本流 1—4（作为 3.2 的子交互展开，消息名前缀 UC-07/）
+' 假设：A1 UC-07 被 UC-06 include，此处挂在对每条消息的校验上，故用「UC-07/步号」前缀区分两套编号
+'       A2 消息体不是合法 JSON 时仍走 5.1 ACK（用例表 UC-05 异常流 E1），不另画分支
+' =====================================================================
+title UC-05 消费事件：消费组建组、逐条取事件、校验后确认
+hide footbox
+scale 1.7
+skinparam shadowing false
+skinparam GroupHeaderBackgroundColor #FFFFFF
+skinparam sequence {
+  ArrowColor #2b2b2b
+  ArrowFontSize 11
+  ArrowFontColor #1f1f1f
+  LifeLineBorderColor #999999
+  ParticipantBorderColor #2b2b2b
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #2b2b2b
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #2b2b2b
+  GroupHeaderFontSize 11
+}
+
+actor "计算进程" as P
+boundary ":队列连接" as QL
+control ":消费调度服务" as CS
+control ":事件校验服务" as CK
+collections ":闸机事件" as EV
+collections ":客流窗口" as WIN
+participant ":事件队列 Redis Stream" as RS <<外部系统>>
+
+P -> QL : 1：“启动消费进程”
+activate QL
+QL -> CS : 1.1：校验连接并建组
+activate CS
+CS -> RS : 1.2：XGROUP CREATE（幂等）
+activate RS
+RS --> CS : OK / BUSYGROUP
+deactivate RS
+
+loop 逐条读取未确认消息
+  CS -> RS : 2.1：XREADGROUP 读取
+  activate RS
+  RS --> CS : 消息体
+  deactivate RS
+  CS -> EV : 3.1：«create» 解析为事件
+  activate EV
+  CS -> CK : 3.2：逐条校验
+  activate CK
+  CK -> EV : UC-07/1.2：读取三个字段
+  alt 字段缺失或类型不对
+    CK -> WIN : UC-07/2.1：非法计数 +1
+  else 事件时间早于容忍窗口
+    CK -> WIN : UC-07/3.1：迟到计数 +1
+  else 正常事件
+    CK -> WIN : UC-07/4.1：计入客流
+  end
+  deactivate CK
+  deactivate EV
+  CS -> RS : 5.1：XACK 确认
+end
+
+deactivate CS
+deactivate QL
+QL --> P
+@enduml
