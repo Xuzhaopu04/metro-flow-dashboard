@@ -106,6 +106,17 @@ def empty_snapshot():
     return snapshot
 
 
+def _int_field(value):
+    """把上游计数收敛成非负整数；类型不对按 0 处理。
+
+    上游写坏了是上游的问题，但页面白屏会被记成接口的锅。
+    不在这里比较、不把字符串丢给 alerts，才能让降级真正生效。
+    """
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    return max(0, value)
+
+
 def normalize_snapshot(payload):
     """按契约 3 补齐快照字段，不信任上游。
 
@@ -115,13 +126,19 @@ def normalize_snapshot(payload):
     告警字段不取上游的值，一律按当前配置重算。消费者写快照时并不知道阈值，
     若采信它写的 alerting，阈值一改页面就挂着过期的判断。
     """
-    total = payload.get("total") or 0
+    total = _int_field(payload.get("total"))
+    raw_stations = payload.get("stations")
+    stations = [
+        item for item in raw_stations
+        if isinstance(item, dict)
+    ] if isinstance(raw_stations, list) else []
+    raw_ts = payload.get("ts")
     snapshot = {
-        "ts": payload.get("ts"),
+        "ts": raw_ts if isinstance(raw_ts, str) else None,
         "total": total,
-        "stations": payload.get("stations") or [],
-        "late_count": payload.get("late_count") or 0,
-        "invalid_count": payload.get("invalid_count") or 0,
+        "stations": stations,
+        "late_count": _int_field(payload.get("late_count")),
+        "invalid_count": _int_field(payload.get("invalid_count")),
     }
     snapshot.update(alert_state(total, settings.ALERT_THRESHOLD))
     return snapshot
@@ -165,9 +182,14 @@ def int_param(request, name, default, low, high):
     raw = request.GET.get(name)
     if raw is None or raw.strip() == "":
         return default, None
+    text = raw.strip()
+    # int() 会接受 "1_0"、全角数字等 Python 特有写法，契约里的整数只认十进制
+    if not re.fullmatch(r"[+-]?[0-9]+", text):
+        return None, error_response("INVALID_PARAM", f"{name} 必须是整数，收到 {raw}", 400)
     try:
-        value = int(raw)
+        value = int(text)
     except ValueError:
+        # 超长数字会触发 Python 的整数字符串长度限制，仍按参数错误返回
         return None, error_response("INVALID_PARAM", f"{name} 必须是整数，收到 {raw}", 400)
     if not low <= value <= high:
         return None, error_response("INVALID_PARAM", f"{name} 必须在 {low}—{high} 之间", 400)
@@ -256,7 +278,11 @@ def resolve_window(request):
 def direction_sums(in_sum, out_sum, total, direction):
     """把 (进站, 出站, 合并总量) 归成对外展示的 (in, out, total)。
 
-    关键约定：**方向未知时 in/out 返回 None，不拿总量顶替**。
+    关键约定 1：`total` 恒为合并乘降量，不随 `direction` 变化。
+    契约 4.2 写的是"direction 只影响 in/out 两个分项"；早先把 total 也改成
+    单方向值，切一次筛选总量就跳一次，导出与报表跟着错。
+
+    关键约定 2：**方向未知时 in/out 返回 None，不拿总量顶替**。
     计算端双写 in/out 之前，两列恒为 0，而 passengers 是进+出的合并乘降量。
     早先的写法把总量记到所选方向上，于是 `?direction=out` 会报
     "出站 1188"——那 1188 其实是进出之和，属于编造。人数字段宁可给 null，
@@ -265,13 +291,14 @@ def direction_sums(in_sum, out_sum, total, direction):
     判定"已知"的依据：两列不全为 0。两列都为 0 但总量大于 0，只能是老数据；
     总量也为 0 时是真的没数据，返回 0 更自然。
     """
+    combined = in_sum + out_sum
     if in_sum == 0 and out_sum == 0:
         return (0, 0, 0) if not total else (None, None, total)
     if direction == "in":
-        return in_sum, 0, in_sum
+        return in_sum, 0, combined
     if direction == "out":
-        return 0, out_sum, out_sum
-    return in_sum, out_sum, in_sum + out_sum
+        return 0, out_sum, combined
+    return in_sum, out_sum, combined
 
 
 def query_rows(fn, fallback):
@@ -507,10 +534,10 @@ def today_quality(since, fallback_late=0):
     为什么不从 metric_window 逐站累加非法数：非法事件可能连 station_id 都没有，
     摊到每站会重复计数。窗口级只在 metric_quality 里存一份，才是唯一正确的值。
 
-    过渡期回退：计算端还没往新表写入时，新表查出来是空的。
-    此时「迟到」可以退回 metric_window 逐站累加——迟到事件必然带 station_id，
-    两者都是窗口级同一个量，数值等价，不会因此失真。
-    「非法」没有站点标识可回退，只能给 0：宁可显示没有，
+    过渡期回退按窗口做，不是整表为空才回退：消费者中途接入时，旧窗口没有
+    metric_quality 行，但 metric_window 里有迟到数；只判断"表是否为空"会把
+    这些旧窗口的迟到数丢掉。迟到事件必然带 station_id，两边同为窗口级，数值等价。
+    「非法」没有站点级来源可回退，只能给 0：宁可显示没有，
     也不能拿一个凑出来的数字冒充。
 
     表为空时返回 0 值而不是 null：契约 4.4 的 quality 三个字段都是整数，
@@ -518,12 +545,22 @@ def today_quality(since, fallback_late=0):
     """
 
     def fetch():
-        agg = MetricQuality.objects.filter(ts__gte=since).aggregate(
-            late=Sum("late_count"), invalid=Sum("invalid_count")
-        )
+        quality_rows = MetricQuality.objects.filter(ts__gte=since)
+        agg = quality_rows.aggregate(late=Sum("late_count"), invalid=Sum("invalid_count"))
         if agg["late"] is None:
             return {"late_count": fallback_late, "invalid_count": 0}
-        return {"late_count": agg["late"], "invalid_count": agg["invalid"] or 0}
+
+        # 旧窗口没有质量行，迟到仍可从 metric_window 逐站补；已覆盖的窗口不重复算
+        missing = (
+            MetricWindow.objects.filter(ts__gte=since)
+            .exclude(ts__in=quality_rows.values("ts"))
+            .aggregate(late=Sum("late_count"))["late"]
+            or 0
+        )
+        return {
+            "late_count": agg["late"] + missing,
+            "invalid_count": agg["invalid"] or 0,
+        }
 
     return query_rows(fetch, {"late_count": fallback_late, "invalid_count": 0})
 
@@ -662,7 +699,16 @@ def read_summary_cache():
     except json.JSONDecodeError:
         logger.warning("今日汇总缓存内容损坏，回退查库")
         return None
-    return payload if isinstance(payload, dict) else None
+    # 合法 JSON 不等于合法汇总：旧版本缓存可能缺字段或类型已经变了
+    if not isinstance(payload, dict):
+        return None
+    if isinstance(payload.get("total"), bool) or not isinstance(payload.get("total"), int):
+        logger.warning("今日汇总缓存结构不符，回退查库")
+        return None
+    if not isinstance(payload.get("quality"), dict):
+        logger.warning("今日汇总缓存缺少 quality，回退查库")
+        return None
+    return payload
 
 
 def write_summary_cache(payload):

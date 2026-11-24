@@ -5,7 +5,13 @@
 
 from datetime import datetime, timedelta, timezone
 
-from stream.metrics import aggregate_window, split_ready, top_stations, window_start_of
+from stream.metrics import (
+    aggregate_window,
+    split_ready,
+    split_ready_indices,
+    top_stations,
+    window_start_of,
+)
 
 TZ = timezone(timedelta(hours=8))
 START = datetime(2026, 10, 20, 9, 30, 0, tzinfo=TZ)
@@ -304,3 +310,89 @@ def test_replay_mode_normal_events_still_work():
     assert result["total"] == 3
     assert result["late_count"] == 0
     assert result["stations"][0]["passengers"] == 3
+
+
+# ---- 输入校验回归：脏数据只能进 invalid_count，不能洗成合法数或让进程崩溃 ----
+
+def test_naive_event_time_is_invalid_not_fatal():
+    """不带时区的时间不能参与 aware 比较，否则会抛 TypeError 打断消费。"""
+    naive = "2026-10-20T09:30:00.100"
+    result = aggregate_window([event(event_time=naive)], START)
+    assert result["total"] == 0
+    assert result["invalid_count"] == 1
+
+
+def test_date_only_event_time_is_invalid():
+    """只给日期同样没有时区，按非法处理。"""
+    result = aggregate_window([event(event_time="2026-10-20")], START)
+    assert result["invalid_count"] == 1
+
+
+def test_split_ready_puts_naive_event_into_ready_not_crash():
+    """split_ready 遇到无时区事件要留给 aggregate 记非法，自己不能抛异常。"""
+    ready, deferred = split_ready(
+        [event(event_time="2026-10-20T09:30:00.100")], START + timedelta(seconds=1)
+    )
+    assert len(ready) == 1 and deferred == []
+
+
+def test_non_integer_passengers_is_invalid():
+    """口径要求整数，不做隐式转换：float、字符串、bool 都不能洗成数字。"""
+    for bad in (3.9, "3", True):
+        result = aggregate_window([event(passengers=bad)], START)
+        assert result["invalid_count"] == 1, bad
+        assert result["total"] == 0, bad
+
+
+def test_negative_passengers_is_invalid():
+    """表 2-4 约束 passengers ≥ 0，负数不能照收。"""
+    result = aggregate_window([event(passengers=-5)], START)
+    assert result["invalid_count"] == 1
+    assert result["total"] == 0
+
+
+def test_overlarge_values_are_invalid():
+    """超过 MySQL INT / varchar(16) 的异常值要挡在聚合层，不能留给落库报错。"""
+    huge = aggregate_window([event(passengers=10 ** 12)], START)
+    assert huge["invalid_count"] == 1
+
+    long_station = aggregate_window([event(station="S" * 40)], START)
+    assert long_station["invalid_count"] == 1
+
+
+def test_invalid_station_id_is_invalid():
+    """station_id 必须是字符串；None 被 str() 成 "None" 会造出一个假站点。"""
+    for bad in (None, 123, ""):
+        result = aggregate_window([event(station=bad)], START)
+        assert result["invalid_count"] == 1, bad
+        assert result["stations"] == [], bad
+
+
+def test_missing_event_id_is_invalid():
+    """event_id 是契约必填字段，缺失按非法事件处理。"""
+    broken = event()
+    broken.pop("event_id")
+    result = aggregate_window([broken], START)
+    assert result["invalid_count"] == 1
+    assert result["total"] == 0
+
+
+def test_late_boundary_exactly_two_windows_is_late():
+    """文档写"早 2 秒以上"算迟到，正好 2 秒也要计入迟到。"""
+    exact = (START - timedelta(seconds=2)).isoformat(timespec="milliseconds")
+    at_boundary = aggregate_window([event(passengers=7, event_time=exact)], START)
+    assert at_boundary["total"] == 0
+    assert at_boundary["late_count"] == 1
+
+    inside = (START - timedelta(milliseconds=1999)).isoformat(timespec="milliseconds")
+    just_inside = aggregate_window([event(passengers=7, event_time=inside)], START)
+    assert just_inside["total"] == 7
+    assert just_inside["late_count"] == 0
+
+
+def test_split_ready_indices_preserves_order():
+    """消费端按原下标确认消息，切窗不能打乱 ready/deferred 的对应关系。"""
+    events = [event(offset_ms=200), event(offset_ms=1500), {"station_id": "A03"}]
+    ready_idx, deferred_idx = split_ready_indices(events, START + timedelta(seconds=1))
+    assert ready_idx == [0, 2]
+    assert deferred_idx == [1]
