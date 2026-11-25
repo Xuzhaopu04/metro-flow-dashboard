@@ -18,6 +18,9 @@ LIMIT_TOKENS=$((LIMIT_BYTES / 4))
 SKIP_RE='(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|poetry\.lock|Pipfile\.lock)$'
 SKIP_RE="$SKIP_RE"'|\.(min\.js|min\.css|map|lock|png|jpg|jpeg|gif|ico|pdf|docx?|xlsx?|zip|jar|woff2?)$'
 SKIP_RE="$SKIP_RE"'|^data/samples/'
+# 22 张坐标化图（鲁棒图、序列图）是脚本按固定参数生成的产物，agent 不会逐行读，
+# 改图要改上游清单再重出；而用例图/包图的 SVG 头部就是人工维护的节点表与边表，仍要查。
+SKIP_RE="$SKIP_RE"'|^docs/03-建模/[0-9]{2}-(时序图|鲁棒图)-[^/]*\.svg$'
 
 fail=0
 report=""
