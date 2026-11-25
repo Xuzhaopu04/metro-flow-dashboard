@@ -37,9 +37,8 @@
 <line x1="310" y1="280" x2="310" y2="320" stroke="#2b2b2b" stroke-width="1.8"/>
 <line x1="310" y1="300" x2="326" y2="300" stroke="#2b2b2b" stroke-width="1.8"/>
 <text x="360" y="356" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:命令行界面</text>
-<circle cx="700" cy="300" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
-<path d="M663.1,274.2 A45,45 0 0 1 736.9,274.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
-<path d="M736.9,274.2 L726.9,267.8 L734.2,262.6 Z" fill="#2b2b2b"/>
+<path d="M686.17,268.94 A34,34 0 1 0 708.84,267.17" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M708.84,252.40 L686.17,268.94 L708.84,281.94 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.8" stroke-linejoin="round"/>
 <text x="700" y="370" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:事件生成服务</text>
 <circle cx="1018" cy="188" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
 <line x1="984" y1="229" x2="1052" y2="229" stroke="#2b2b2b" stroke-width="1.8"/>
@@ -71,6 +70,6 @@
 <text x="855.0" y="384.3" text-anchor="middle" font-size="12" fill="#2b2b2b">4.1：«create» 组装事件</text>
 <g><rect x="795.5" y="456.2" width="108.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
 <text x="849.9" y="473.5" text-anchor="middle" font-size="12" fill="#2b2b2b">5.1：XADD 写入</text>
-<text x="40" y="714" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="714" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶三角 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
 <text x="40" y="740" font-size="12.5" fill="#5a6472">第 6 步等待后回到第 2 步，形成循环；4.1 内含「生成 1—5 人乘客数」。下游「实时计算模块」异步消费 5.1 的事件，属 UC-05 输入，本图不画同步交互。</text>
 </svg>
