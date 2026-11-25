@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="654" height="791" viewBox="0 0 654 791">
+<!--
+  产物头（由同名 .puml 的头部注释原样带入）
+  产物：UC-18 感知断线与恢复 序列图（时序图）
+  规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+  上游：36-鲁棒图-感知断线与恢复.svg（对象名逐字沿用）；用例表 UC-18 基本流 1—4
+  覆盖：基本流 1—4 全部活动；异常流 E1（长时间断线保留最后数据）见图注
+  假设：A1 UC-18 是 UC-14 的扩展，扩展点为「请求断线」，由 1.1 的失败触发
+  A2 连接状态存在页面内存，不是域对象，故本图不含实体（与 36 号鲁棒图一致）
+-->
+<rect width="654" height="791" fill="#fff"/>
+<text x="327.0" y="34" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="19" font-weight="bold" fill="#1f1f1f" text-anchor="middle">UC-18 感知断线与恢复：失败即转态，恢复即续数</text>
+<line x1="100.0" y1="160" x2="100.0" y2="767" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="250.0" y1="134" x2="250.0" y2="767" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="400.0" y1="134" x2="400.0" y2="767" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="550.0" y1="134" x2="550.0" y2="767" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<rect x="544.5" y="329.0" width="11" height="311.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="394.5" y="211.0" width="11" height="429.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="244.5" y="177.0" width="11" height="463.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="166.0" y="284.0" width="468.0" height="427.0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/>
+<path d="M 166.0,284.0 L 215.0,284.0 L 215.0,293.0 L 208.0,304.0 L 166.0,304.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.2"/>
+<rect x="174.0" y="368.0" width="452.0" height="311.0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/>
+<path d="M 174.0,368.0 L 210.0,368.0 L 210.0,377.0 L 203.0,388.0 L 174.0,388.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.2"/>
+<line x1="174.0" y1="541.0" x2="626.0" y2="541.0" stroke="#2b2b2b" stroke-width="1.1" stroke-dasharray="6,4"/>
+<circle cx="100.0" cy="86" r="10" fill="#fff" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="96" x2="100.0" y2="116" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="99" x2="87.0" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="99" x2="113.0" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="116" x2="89.0" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="116" x2="111.0" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<text x="100.0" y="150" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">值班员</text>
+<line x1="76.5" y1="154" x2="123.5" y2="154" stroke="#1f1f1f" stroke-width="0.9"/>
+<rect x="190.0" y="74" width="120.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="250.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:大屏页面</text>
+<line x1="217.0" y1="119" x2="283.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="295.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="284.0" y1="82.5" x2="284.0" y2="95.5" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="284.0" y1="89" x2="289.5" y2="89" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="340.0" y="74" width="120.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="400.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:连接检测</text>
+<line x1="367.0" y1="119" x2="433.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="445.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<path d="M 446.43,81.30 L 442.76,83.98 L 446.43,86.08 Z" fill="none" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="490.0" y="74" width="120.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="550.0" y="93" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="11" fill="#1f1f1f" text-anchor="middle">«外部系统»</text>
+<text x="550.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:数据服务模块</text>
+<line x1="502.0" y1="119" x2="598.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<text x="190.5" y="299.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#B03A12" font-weight="bold" text-anchor="middle" stroke="#fff" stroke-width="2.6" paint-order="stroke">loop</text>
+<rect x="220.0" y="288.5" width="102.0" height="17" fill="#fff"/>
+<text x="224.0" y="299.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f">[按原周期重试]</text>
+<text x="192.0" y="383.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#B03A12" font-weight="bold" text-anchor="middle" stroke="#fff" stroke-width="2.6" paint-order="stroke">alt</text>
+<rect x="215.0" y="372.5" width="74.0" height="17" fill="#fff"/>
+<text x="219.0" y="383.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f">[仍然失败]</text>
+<rect x="186.0" y="549.5" width="104.0" height="17" fill="#fff"/>
+<text x="190.0" y="560.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f" stroke="#fff" stroke-width="3.4" paint-order="stroke" stroke-linejoin="round">else [恢复成功]</text>
+<line x1="104.0" y1="182.0" x2="238.0" y2="182.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 245.0,182.0 L 236.0,177.4 L 236.0,186.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="112.0" y="175.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1：“值守中持续轮询”</text>
+<line x1="254.0" y1="216.0" x2="388.0" y2="216.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 395.0,216.0 L 386.0,211.4 L 386.0,220.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="262.0" y="209.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.1：请求超时或非 2xx</text>
+<line x1="396.0" y1="250.0" x2="262.0" y2="250.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 255.0,250.0 L 264.0,245.4 L 264.0,254.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="262.0" y="243.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">2.1：状态改为「连接中断，正在重试」</text>
+<line x1="404.0" y1="334.0" x2="538.0" y2="334.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 545.0,334.0 L 536.0,329.4 L 536.0,338.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="412.0" y="327.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">3.1：重试 GET /api/snapshot</text>
+<line x1="546.0" y1="418.0" x2="412.0" y2="418.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 405.0,418.0 L 415.0,413.0 M 405.0,418.0 L 415.0,423.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="443.0" y="411.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">超时 / 5xx</text>
+<line x1="546.0" y1="599.0" x2="412.0" y2="599.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 405.0,599.0 L 415.0,594.0 M 405.0,599.0 L 415.0,604.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="420.0" y="592.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">200 + 快照 JSON</text>
+<line x1="396.0" y1="633.0" x2="262.0" y2="633.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 255.0,633.0 L 264.0,628.4 L 264.0,637.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="262.0" y="626.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">4.1：状态回到「实时连接」，数据续上</text>
+<line x1="246.0" y1="731.0" x2="112.0" y2="731.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 105.0,731.0 L 115.0,726.0 M 105.0,731.0 L 115.0,736.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 466.0,452.0 h 116.0 l 12,12 v 51 h -128.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.1"/>
+<path d="M 582.0,452.0 v 12 h 12" fill="none" stroke="#2b2b2b" stroke-width="1.1"/>
+<text x="476.0" y="470.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#1f1f1f">保留最后一次数据，</text>
+<text x="476.0" y="487.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#1f1f1f">并标注「不是最新」</text>
+<text x="476.0" y="504.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#1f1f1f">（异常流 E1）</text>
+</svg>

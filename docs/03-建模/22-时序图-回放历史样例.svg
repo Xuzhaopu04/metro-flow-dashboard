@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="834" height="866" viewBox="0 0 834 866">
+<!--
+  产物头（由同名 .puml 的头部注释原样带入）
+  产物：UC-04 回放历史样例 序列图（时序图）
+  规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+  上游：图/18-鲁棒图-回放历史样例.png（对象名逐字沿用）、用例表 UC-04 基本流 1—4 + 异常流 E1 / E2
+  覆盖：基本流 1—4 全部活动；异常流 E1（样例为空）、E2（某行非合法 JSON）以 alt 表达
+  假设：A1 补第 3 步「按事件时间差与倍速计算等待时长」—— 鲁棒图 18 无对应消息，属覆盖缺口
+  A2 鲁棒图 18 的 5.1「打印进度」在用例表里没有第 5 步，本图改挂 4.2（逐条写入后输出进度）
+-->
+<rect width="834" height="866" fill="#fff"/>
+<text x="417.0" y="34" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="19" font-weight="bold" fill="#1f1f1f" text-anchor="middle">UC-04 回放历史样例：读取样例到逐条写入</text>
+<line x1="103.0" y1="160" x2="103.0" y2="842" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="259.0" y1="134" x2="259.0" y2="842" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="415.0" y1="134" x2="415.0" y2="842" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="571.0" y1="134" x2="571.0" y2="842" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="727.0" y1="134" x2="727.0" y2="842" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<rect x="565.5" y="245.0" width="11" height="46.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="721.5" y="601.0" width="11" height="46.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="409.5" y="211.0" width="11" height="536.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="253.5" y="177.0" width="11" height="570.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="172.0" y="318.0" width="642.0" height="502.0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/>
+<path d="M 172.0,318.0 L 208.0,318.0 L 208.0,327.0 L 201.0,338.0 L 172.0,338.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.2"/>
+<line x1="172.0" y1="446.0" x2="814.0" y2="446.0" stroke="#2b2b2b" stroke-width="1.1" stroke-dasharray="6,4"/>
+<rect x="180.0" y="504.0" width="626.0" height="216.0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/>
+<path d="M 180.0,504.0 L 229.0,504.0 L 229.0,513.0 L 222.0,524.0 L 180.0,524.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.2"/>
+<circle cx="103.0" cy="86" r="10" fill="#fff" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="103.0" y1="96" x2="103.0" y2="116" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="103.0" y1="99" x2="90.0" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="103.0" y1="99" x2="116.0" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="103.0" y1="116" x2="92.0" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="103.0" y1="116" x2="114.0" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<text x="103.0" y="150" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">系统维护者</text>
+<line x1="64.5" y1="154" x2="141.5" y2="154" stroke="#1f1f1f" stroke-width="0.9"/>
+<rect x="196.0" y="74" width="126.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="259.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:命令行界面</text>
+<line x1="218.5" y1="119" x2="299.5" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="307.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="296.0" y1="82.5" x2="296.0" y2="95.5" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="296.0" y1="89" x2="301.5" y2="89" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="352.0" y="74" width="126.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="415.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:回放服务</text>
+<line x1="382.0" y1="119" x2="448.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="463.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<path d="M 464.43,81.30 L 460.76,83.98 L 464.43,86.08 Z" fill="none" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="514.0" y="80" width="126.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="508.0" y="74" width="126.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="571.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:闸机事件</text>
+<line x1="538.0" y1="119" x2="604.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="619.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="613.5" y1="96.3" x2="624.5" y2="96.3" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="664.0" y="74" width="126.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="727.0" y="93" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="11" fill="#1f1f1f" text-anchor="middle">«外部系统»</text>
+<text x="727.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:Redis Stream</text>
+<line x1="676.0" y1="119" x2="778.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<text x="190.0" y="333.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#B03A12" font-weight="bold" text-anchor="middle" stroke="#fff" stroke-width="2.6" paint-order="stroke">alt</text>
+<rect x="213.0" y="322.5" width="198.0" height="17" fill="#fff"/>
+<text x="217.0" y="333.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f">[样例为空或某行非合法 JSON]</text>
+<rect x="184.0" y="454.5" width="104.0" height="17" fill="#fff"/>
+<text x="188.0" y="465.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f" stroke="#fff" stroke-width="3.4" paint-order="stroke" stroke-linejoin="round">else [样例可用]</text>
+<text x="204.5" y="519.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#B03A12" font-weight="bold" text-anchor="middle" stroke="#fff" stroke-width="2.6" paint-order="stroke">loop</text>
+<rect x="234.0" y="508.5" width="74.0" height="17" fill="#fff"/>
+<text x="238.0" y="519.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f">[逐条事件]</text>
+<line x1="107.0" y1="182.0" x2="247.0" y2="182.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 254.0,182.0 L 245.0,177.4 L 245.0,186.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="115.0" y="175.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1：“回放样例”（replay 路径）</text>
+<line x1="263.0" y1="216.0" x2="403.0" y2="216.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 410.0,216.0 L 401.0,211.4 L 401.0,220.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="278.5" y="209.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.1：传入样例路径</text>
+<line x1="419.0" y1="250.0" x2="559.0" y2="250.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 566.0,250.0 L 557.0,245.4 L 557.0,254.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="434.5" y="243.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">2.1：读取全部事件</text>
+<line x1="567.0" y1="284.0" x2="427.0" y2="284.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 420.0,284.0 L 430.0,279.0 M 420.0,284.0 L 430.0,289.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="427.0" y="277.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">事件列表（按事件时间升序）</text>
+<line x1="411.0" y1="368.0" x2="271.0" y2="368.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 264.0,368.0 L 274.0,363.0 M 264.0,368.0 L 274.0,373.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="271.0" y="361.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">E1 / E2：提示原因后结束</text>
+<line x1="255.0" y1="402.0" x2="115.0" y2="402.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 108.0,402.0 L 118.0,397.0 M 108.0,402.0 L 118.0,407.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="154.0" y="395.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">退出码 1</text>
+<path d="M 420.0,554.0 h 32 v 22 h -32" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 420.0,576.0 l 10,-4.6 v 9.2 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="423.0" y="548.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">3.1：按事件时间差与倍速计算等待时长</text>
+<line x1="419.0" y1="606.0" x2="715.0" y2="606.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 722.0,606.0 L 713.0,601.4 L 713.0,610.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="462.5" y="599.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">4.1：XADD 逐条写入 gate_events</text>
+<line x1="723.0" y1="640.0" x2="427.0" y2="640.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 420.0,640.0 L 430.0,635.0 M 420.0,640.0 L 430.0,645.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="543.0" y="633.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">消息编号</text>
+<line x1="411.0" y1="674.0" x2="271.0" y2="674.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 264.0,674.0 L 273.0,669.4 L 273.0,678.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="271.0" y="667.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">4.2：打印进度（已回放 n / N 条）</text>
+<line x1="411.0" y1="740.0" x2="271.0" y2="740.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 264.0,740.0 L 274.0,735.0 M 264.0,740.0 L 274.0,745.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="292.5" y="733.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">4.3：回放完成</text>
+<line x1="255.0" y1="774.0" x2="115.0" y2="774.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 108.0,774.0 L 118.0,769.0 M 108.0,774.0 L 118.0,779.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+</svg>

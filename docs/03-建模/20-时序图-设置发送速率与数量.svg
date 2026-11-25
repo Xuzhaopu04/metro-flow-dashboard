@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="678" height="660" viewBox="0 0 678 660">
+<!--
+  产物头（由同名 .puml 的头部注释原样带入）
+  产物：UC-02 设置发送速率与数量 序列图（时序图）
+  规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+  上游：图/16-鲁棒图-设置发送速率与数量.png（对象名逐字沿用）、用例表 UC-02 基本流 1—3
+  覆盖：基本流 1—3 全部活动；异常流 E1（速率非正数）以 alt 表达
+  假设：A1 不引入实体 —— 速率与条数只在进程内生效、不持久化，与鲁棒图 16 一致
+  说明：用例表第 3 步"count 为 0 表示不限条数"是取值约定，不是一次交互，写在 note 里
+-->
+<rect width="678" height="660" fill="#fff"/>
+<text x="339.0" y="34" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="19" font-weight="bold" fill="#1f1f1f" text-anchor="middle">UC-02 设置发送速率与数量：参数到发送节奏</text>
+<line x1="100.0" y1="160" x2="100.0" y2="636" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="250.0" y1="134" x2="250.0" y2="636" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="400.0" y1="134" x2="400.0" y2="636" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<rect x="394.5" y="211.0" width="11" height="362.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="244.5" y="177.0" width="11" height="396.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="324.0" y="250.0" width="332.0" height="234.0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/>
+<path d="M 324.0,250.0 L 360.0,250.0 L 360.0,259.0 L 353.0,270.0 L 324.0,270.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.2"/>
+<line x1="324.0" y1="362.0" x2="656.0" y2="362.0" stroke="#2b2b2b" stroke-width="1.1" stroke-dasharray="6,4"/>
+<circle cx="100.0" cy="86" r="10" fill="#fff" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="96" x2="100.0" y2="116" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="99" x2="87.0" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="99" x2="113.0" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="116" x2="89.0" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="100.0" y1="116" x2="111.0" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<text x="100.0" y="150" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">系统维护者</text>
+<line x1="61.5" y1="154" x2="138.5" y2="154" stroke="#1f1f1f" stroke-width="0.9"/>
+<rect x="190.0" y="74" width="120.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="250.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:命令行界面</text>
+<line x1="209.5" y1="119" x2="290.5" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="295.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="284.0" y1="82.5" x2="284.0" y2="95.5" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="284.0" y1="89" x2="289.5" y2="89" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="340.0" y="74" width="120.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="400.0" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:事件生成服务</text>
+<line x1="352.0" y1="119" x2="448.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="445.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<path d="M 446.43,81.30 L 442.76,83.98 L 446.43,86.08 Z" fill="none" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="342.0" y="265.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#B03A12" font-weight="bold" text-anchor="middle" stroke="#fff" stroke-width="2.6" paint-order="stroke">alt</text>
+<rect x="365.0" y="254.5" width="88.0" height="17" fill="#fff"/>
+<text x="369.0" y="265.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f">[速率非正数]</text>
+<rect x="336.0" y="370.5" width="118.0" height="17" fill="#fff"/>
+<text x="340.0" y="381.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f" stroke="#fff" stroke-width="3.4" paint-order="stroke" stroke-linejoin="round">else [速率为正数]</text>
+<line x1="104.0" y1="182.0" x2="238.0" y2="182.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 245.0,182.0 L 236.0,177.4 L 236.0,186.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="112.0" y="175.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1：“设置速率与数量”（参数 speed、count）</text>
+<line x1="254.0" y1="216.0" x2="388.0" y2="216.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 395.0,216.0 L 386.0,211.4 L 386.0,220.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="262.0" y="209.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.1：解析并校验参数</text>
+<path d="M 405.0,300.0 h 32 v 22 h -32" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 405.0,322.0 l 10,-4.6 v 9.2 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="408.0" y="294.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.2：按 0.01 兜底，避免除零或死循环</text>
+<path d="M 405.0,420.0 h 32 v 22 h -32" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 405.0,442.0 l 10,-4.6 v 9.2 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="408.0" y="414.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.2：按 1 / speed 换算发送间隔</text>
+<line x1="396.0" y1="566.0" x2="262.0" y2="566.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 255.0,566.0 L 265.0,561.0 M 255.0,566.0 L 265.0,571.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="262.0" y="559.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.3：发送节奏就绪（间隔 X 秒、条数 N）</text>
+<line x1="246.0" y1="600.0" x2="112.0" y2="600.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 105.0,600.0 L 115.0,595.0 M 105.0,600.0 L 115.0,605.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 466.0,504.0 h 164.0 l 12,12 v 34 h -176.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.1"/>
+<path d="M 630.0,504.0 v 12 h 12" fill="none" stroke="#2b2b2b" stroke-width="1.1"/>
+<text x="476.0" y="522.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#1f1f1f">count 为 0 表示不限条数，</text>
+<text x="476.0" y="539.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#1f1f1f">该取值约定不产生一次交互。</text>
+</svg>

@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1539" height="1148" viewBox="0 0 1539 1148">
+<!--
+  产物头（由同名 .puml 的头部注释原样带入）
+  产物：UC-15 按线路筛选 + UC-16 查看趋势与排行 序列图（时序图）
+  规范：se-sequence-diagram §4 符号、§5 三步转换、§6 命名与编号、references/03 固定参数
+  上游：33/34-鲁棒图（对象名逐字沿用）；用例表 UC-15 / UC-16
+  覆盖：UC-15 基本流 1—3；UC-16 基本流 1—3
+  假设：A1 UC-15 是 UC-14 的扩展：先由筛选改条件，再由 UC-16 的 5 秒轮询取数，两段用 == 分节
+  A2 筛选是本地过滤，不新增接口调用；故 UC-15 段里没有到 :数据服务模块 的消息
+  A3 UC-16 备选流 A1（历史接口失败保留上一轮图形）用 alt 的失败分区表达
+-->
+<rect width="1539" height="1148" fill="#fff"/>
+<text x="769.5" y="34" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="19" font-weight="bold" fill="#1f1f1f" text-anchor="middle">UC-15 按线路筛选 → UC-16 查看趋势与排行</text>
+<line x1="107.5" y1="160" x2="107.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="272.5" y1="160" x2="272.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="437.5" y1="134" x2="437.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="602.5" y1="134" x2="602.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="767.5" y1="134" x2="767.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="932.5" y1="134" x2="932.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="1097.5" y1="134" x2="1097.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="1262.5" y1="134" x2="1262.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<line x1="1427.5" y1="134" x2="1427.5" y2="1124" stroke="#9a9a9a" stroke-width="1.2" stroke-dasharray="6,5"/>
+<rect x="927.0" y="313.0" width="11" height="46.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="1092.0" y="381.0" width="11" height="46.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="597.0" y="279.0" width="11" height="182.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="1422.0" y="669.0" width="11" height="96.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="1257.0" y="787.0" width="11" height="46.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="762.0" y="585.0" width="11" height="350.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="432.0" y="245.0" width="11" height="690.0" fill="#fff" stroke="#2b2b2b" stroke-width="0.9"/>
+<rect x="676.0" y="624.0" width="843.0" height="444.0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/>
+<path d="M 676.0,624.0 L 725.0,624.0 L 725.0,633.0 L 718.0,644.0 L 676.0,644.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.2"/>
+<rect x="684.0" y="708.0" width="827.0" height="328.0" fill="none" stroke="#2b2b2b" stroke-width="1.2"/>
+<path d="M 684.0,708.0 L 720.0,708.0 L 720.0,717.0 L 713.0,728.0 L 684.0,728.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.2"/>
+<line x1="684.0" y1="870.0" x2="1511.0" y2="870.0" stroke="#2b2b2b" stroke-width="1.1" stroke-dasharray="6,4"/>
+<rect x="22" y="181.0" width="1495" height="30" fill="#EEF3F8" stroke="#B8C6D6" stroke-width="1"/>
+<rect x="690.5" y="181.0" width="158.0" height="30" fill="#EEF3F8" stroke="#B8C6D6" stroke-width="1"/>
+<text x="769.5" y="201.5" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#2E5C8A" text-anchor="middle">UC-15 按线路筛选</text>
+<rect x="22" y="487.0" width="1495" height="30" fill="#EEF3F8" stroke="#B8C6D6" stroke-width="1"/>
+<rect x="675.5" y="487.0" width="188.0" height="30" fill="#EEF3F8" stroke="#B8C6D6" stroke-width="1"/>
+<text x="769.5" y="507.5" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#2E5C8A" text-anchor="middle">UC-16 查看趋势与排行</text>
+<circle cx="107.5" cy="86" r="10" fill="#fff" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="107.5" y1="96" x2="107.5" y2="116" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="107.5" y1="99" x2="94.5" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="107.5" y1="99" x2="120.5" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="107.5" y1="116" x2="96.5" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="107.5" y1="116" x2="118.5" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<text x="107.5" y="150" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">值班主管</text>
+<line x1="76.5" y1="154" x2="138.5" y2="154" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="272.5" cy="86" r="10" fill="#fff" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="272.5" y1="96" x2="272.5" y2="116" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="272.5" y1="99" x2="259.5" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="272.5" y1="99" x2="285.5" y2="109" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="272.5" y1="116" x2="261.5" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<line x1="272.5" y1="116" x2="283.5" y2="132" stroke="#2b2b2b" stroke-width="1.6"/>
+<text x="272.5" y="150" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">值班员</text>
+<line x1="249.0" y1="154" x2="296.0" y2="154" stroke="#1f1f1f" stroke-width="0.9"/>
+<rect x="370.0" y="74" width="135.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="437.5" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:大屏页面</text>
+<line x1="404.5" y1="119" x2="470.5" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="490.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="479.0" y1="82.5" x2="479.0" y2="95.5" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="479.0" y1="89" x2="484.5" y2="89" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="535.0" y="74" width="135.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="602.5" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:筛选控制器</text>
+<line x1="562.0" y1="119" x2="643.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="655.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<path d="M 656.43,81.30 L 652.76,83.98 L 656.43,86.08 Z" fill="none" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="700.0" y="74" width="135.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="767.5" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:趋势面板控制器</text>
+<line x1="712.0" y1="119" x2="823.0" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="820.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<path d="M 821.43,81.30 L 817.76,83.98 L 821.43,86.08 Z" fill="none" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="865.0" y="74" width="135.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="932.5" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:线路</text>
+<line x1="914.5" y1="119" x2="950.5" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="985.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="979.5" y1="96.3" x2="990.5" y2="96.3" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="1030.0" y="74" width="135.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="1097.5" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:车站</text>
+<line x1="1079.5" y1="119" x2="1115.5" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="1150.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="1144.5" y1="96.3" x2="1155.5" y2="96.3" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="1195.0" y="74" width="135.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="1262.5" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:客流窗口</text>
+<line x1="1229.5" y1="119" x2="1295.5" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<circle cx="1315.0" cy="89" r="5.5" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<line x1="1309.5" y1="96.3" x2="1320.5" y2="96.3" stroke="#2b2b2b" stroke-width="1.5"/>
+<rect x="1360.0" y="74" width="135.0" height="52" fill="#fff" stroke="#2b2b2b" stroke-width="1.5"/>
+<text x="1427.5" y="93" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="11" fill="#1f1f1f" text-anchor="middle">«外部系统»</text>
+<text x="1427.5" y="115" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="15" fill="#1f1f1f" text-anchor="middle">:数据服务模块</text>
+<line x1="1379.5" y1="119" x2="1475.5" y2="119" stroke="#1f1f1f" stroke-width="0.9"/>
+<text x="700.5" y="639.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#B03A12" font-weight="bold" text-anchor="middle" stroke="#fff" stroke-width="2.6" paint-order="stroke">loop</text>
+<rect x="730.0" y="628.5" width="90.0" height="17" fill="#fff"/>
+<text x="734.0" y="639.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f">[每 5 秒一次]</text>
+<text x="702.0" y="723.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#B03A12" font-weight="bold" text-anchor="middle" stroke="#fff" stroke-width="2.6" paint-order="stroke">alt</text>
+<rect x="725.0" y="712.5" width="74.0" height="17" fill="#fff"/>
+<text x="729.0" y="723.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f">[接口正常]</text>
+<rect x="696.0" y="878.5" width="132.0" height="17" fill="#fff"/>
+<text x="700.0" y="889.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="13.5" fill="#1f1f1f" stroke="#fff" stroke-width="3.4" paint-order="stroke" stroke-linejoin="round">else [历史接口失败]</text>
+<line x1="276.5" y1="250.0" x2="425.5" y2="250.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 432.5,250.0 L 423.5,245.4 L 423.5,254.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="284.5" y="243.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1：“点击 1 号线 / 全部”</text>
+<line x1="441.5" y1="284.0" x2="590.5" y2="284.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 597.5,284.0 L 588.5,279.4 L 588.5,288.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="461.5" y="277.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.1：切换线路条件</text>
+<line x1="606.5" y1="318.0" x2="920.5" y2="318.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 927.5,318.0 L 918.5,313.4 L 918.5,322.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="709.0" y="311.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">2.1：取线路下站点</text>
+<line x1="928.5" y1="352.0" x2="614.5" y2="352.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 607.5,352.0 L 617.5,347.0 M 607.5,352.0 L 617.5,357.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="725.5" y="345.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">站点编号集合</text>
+<line x1="606.5" y1="386.0" x2="1085.5" y2="386.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 1092.5,386.0 L 1083.5,381.4 L 1083.5,390.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="784.5" y="379.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">2.2：按线路过滤集合</text>
+<line x1="1093.5" y1="420.0" x2="614.5" y2="420.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 607.5,420.0 L 617.5,415.0 M 607.5,420.0 L 617.5,425.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="808.0" y="413.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">过滤后的站点</text>
+<line x1="598.5" y1="454.0" x2="449.5" y2="454.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 442.5,454.0 L 451.5,449.4 L 451.5,458.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="454.5" y="447.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">3.1：传给柱状图重绘</text>
+<line x1="111.5" y1="556.0" x2="425.5" y2="556.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 432.5,556.0 L 423.5,551.4 L 423.5,560.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="198.5" y="549.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1：“查看趋势与排行”</text>
+<line x1="441.5" y1="590.0" x2="755.5" y2="590.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 762.5,590.0 L 753.5,585.4 L 753.5,594.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="515.0" y="583.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.1：每 5 秒请求序列与排行</text>
+<line x1="771.5" y1="674.0" x2="1415.5" y2="674.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 1422.5,674.0 L 1413.5,669.4 L 1413.5,678.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="992.5" y="667.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">1.2：GET /api/series、/api/rank</text>
+<line x1="1423.5" y1="758.0" x2="779.5" y2="758.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 772.5,758.0 L 782.5,753.0 M 772.5,758.0 L 782.5,763.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="1041.5" y="751.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">200 + 序列 / 排行</text>
+<line x1="771.5" y1="792.0" x2="1250.5" y2="792.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 1257.5,792.0 L 1248.5,787.4 L 1248.5,796.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="956.5" y="785.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">2.1：渲染趋势折线</text>
+<line x1="771.5" y1="826.0" x2="1085.5" y2="826.0" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 1092.5,826.0 L 1083.5,821.4 L 1083.5,830.6 Z" fill="#2b2b2b" stroke="#2b2b2b" stroke-width="0.8"/>
+<text x="874.0" y="819.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">2.2：渲染排行列表</text>
+<line x1="1423.5" y1="928.0" x2="779.5" y2="928.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 772.5,928.0 L 782.5,923.0 M 772.5,928.0 L 782.5,933.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<text x="1065.5" y="921.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="14" fill="#1f1f1f" stroke="#fff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">超时 / 5xx</text>
+<line x1="433.5" y1="1088.0" x2="119.5" y2="1088.0" stroke="#2b2b2b" stroke-width="1.25" stroke-dasharray="5,4"/>
+<path d="M 112.5,1088.0 L 122.5,1083.0 M 112.5,1088.0 L 122.5,1093.0" fill="none" stroke="#2b2b2b" stroke-width="1.25"/>
+<path d="M 841.0,962.0 h 104.0 l 12,12 v 34 h -116.0 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.1"/>
+<path d="M 945.0,962.0 v 12 h 12" fill="none" stroke="#2b2b2b" stroke-width="1.1"/>
+<text x="851.0" y="980.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#1f1f1f">保留上一轮图形，</text>
+<text x="851.0" y="997.0" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="12.5" fill="#1f1f1f">不打断主看板</text>
+</svg>
