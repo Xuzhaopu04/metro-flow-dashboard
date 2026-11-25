@@ -43,9 +43,8 @@
 <line x1="310" y1="340" x2="310" y2="380" stroke="#2b2b2b" stroke-width="1.8"/>
 <line x1="310" y1="360" x2="326" y2="360" stroke="#2b2b2b" stroke-width="1.8"/>
 <text x="360" y="416" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:HTTP 接口</text>
-<circle cx="700" cy="360" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
-<path d="M663.1,334.2 A45,45 0 0 1 736.9,334.2" fill="none" stroke="#2b2b2b" stroke-width="1.8"/>
-<path d="M736.9,334.2 L726.9,327.8 L734.2,322.6 Z" fill="#2b2b2b"/>
+<path d="M686.17,328.94 A34,34 0 1 0 708.84,327.17" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
+<path d="M708.84,312.40 L686.17,328.94 L708.84,341.94 Z" fill="#fff" stroke="#2b2b2b" stroke-width="1.8" stroke-linejoin="round"/>
 <text x="700" y="430" text-anchor="middle" font-size="13" text-decoration="underline" fill="#2b2b2b">:序列查询服务</text>
 <circle cx="1010" cy="170" r="34" fill="#fff" stroke="#2b2b2b" stroke-width="1.8"/>
 <line x1="976" y1="211" x2="1044" y2="211" stroke="#2b2b2b" stroke-width="1.8"/>
@@ -77,6 +76,6 @@
 <text x="845.3" y="397.1" text-anchor="middle" font-size="12" fill="#2b2b2b">3.2：按站点过滤</text>
 <g><rect x="780.2" y="490.3" width="135.8" height="26" rx="10" fill="#fff" stroke="#c9d2dc" stroke-width="1"/></g>
 <text x="848.1" y="507.6" text-anchor="middle" font-size="12" fill="#2b2b2b">4.1：按时间聚合升序</text>
-<text x="40" y="744" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶弧 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
+<text x="40" y="744" font-size="12" fill="#5a6472">图例：左竖线 = 边界　顶三角 = 控制　下横线 = 实体　右侧方框 = 外部系统</text>
 <text x="40" y="770" font-size="12.5" fill="#5a6472">可选事件流 A2：时间范围内无数据时返回空 points 与 200；E1：参数越界返回 400 INVALID_PARAM 并带上收到的值。</text>
 </svg>
